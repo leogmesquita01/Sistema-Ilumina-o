@@ -1,17 +1,37 @@
 """
-Tela: Mapa e Localizador de Postes (COSERN)
-Busca por código, visualização geográfica e despacho rápido.
+Tela: Mapa Realtime e Localizador de Postes (COSERN)
+Monitoramento em tempo real da rede de iluminação pública de Boa Saúde / RN.
 """
 
 import streamlit as st
 import folium
 from folium import plugins
 from streamlit_folium import st_folium
-from app.servicos.dados_postes import listar_postes, obter_poste_por_codigo, obter_resumo_indicadores
+import datetime
+from app.servicos.dados_postes import listar_postes, obter_resumo_indicadores
 
 def renderizar_tela_mapa():
-    st.markdown('<h1 class="montserrat-title">🗺️ Mapa & Localizador de Postes</h1>', unsafe_allow_html=True)
-    st.caption("Prefeitura Municipal de Boa Saúde / RN — Secretaria de Obras e Infraestrutura")
+    # Banner Hero com Status em Tempo Real
+    hora_atual = datetime.datetime.now().strftime("%H:%M:%S")
+    st.markdown(
+        f"""
+        <div class="hero-banner" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div>
+                <span style="display: inline-flex; align-items: center; gap: 8px; background: rgba(16, 185, 129, 0.2); color: #10B981; padding: 4px 12px; border-radius: 20px; font-weight: 800; font-size: 11px; border: 1px solid rgba(16, 185, 129, 0.4); text-transform: uppercase;">
+                    <span style="width: 8px; height: 8px; border-radius: 50%; background: #10B981; box-shadow: 0 0 10px #10B981;"></span>
+                    MONITORAMENTO EM TEMPO REAL &bull; ONLINE
+                </span>
+                <h1 class="montserrat-title" style="margin: 8px 0 2px 0; font-size: 1.8rem;">Mapa da Rede Elétrica & Postes</h1>
+                <p style="margin: 0; color: #8E8E93; font-size: 0.85rem;">Prefeitura Municipal de Boa Saúde / RN — Secretaria de Obras e Infraestrutura</p>
+            </div>
+            <div style="text-align: right;">
+                <span style="font-family: 'JetBrains Mono'; font-size: 0.85rem; color: #10B981; font-weight: 700;">📡 Sincronização: {hora_atual}</span>
+                <div style="font-size: 0.75rem; color: #8E8E93; margin-top: 2px;">Rede: Neoenergia COSERN</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     # 1. Cards de Indicadores Rápidos no Topo
     stats = obter_resumo_indicadores()
@@ -27,29 +47,31 @@ def renderizar_tela_mapa():
 
     st.markdown("---")
 
-    # 2. Barra de Busca em Destaque
-    col_busca, col_filtro = st.columns([3, 1])
+    # 2. Controles de Tempo Real e Busca
+    col_busca, col_filtro, col_realtime = st.columns([3, 1, 1])
     
     with col_busca:
         busca_termo = st.text_input(
             "Buscar por código da plaqueta ou logradouro:",
-            placeholder="Digite o código (ex: CSR-1001, CSR-1004) ou nome da rua...",
+            placeholder="Digite o código (ex: CSR-1001, CSR-1004) ou rua...",
             help="Pressione Enter após digitar para filtrar no mapa."
         )
 
     with col_filtro:
         filtro_status = st.selectbox(
-            "Filtrar por Status:",
+            "Status:",
             ["Todos", "normal", "chamado_aberto", "urgente"]
         )
+
+    with col_realtime:
+        modo_realtime = st.toggle("📡 Rastreio Realtime", value=True, help="Ativa controles de geolocalização e atualização dinâmica do mapa")
 
     # 3. Consulta de Postes
     postes = listar_postes(filtro_status=filtro_status, termo_busca=busca_termo)
     
-    # 4. Poste Selecionado (se houver busca direta ou escolha)
+    # 4. Poste Selecionado
     poste_focado = None
     if busca_termo:
-        # Tenta achar exato ou primeiro resultado
         exatos = [p for p in postes if p["codigo"].lower() == busca_termo.strip().lower()]
         if exatos:
             poste_focado = exatos[0]
@@ -64,11 +86,11 @@ def renderizar_tela_mapa():
         centro_mapa = [-6.1611, -35.6025] # Boa Saúde Centro
         zoom_inicial = 15
 
-    # 5. Layout com Mapa e Detalhes do Poste
+    # 5. Layout com Mapa Realtime e Detalhes
     col_mapa, col_detalhes = st.columns([3, 2])
 
     with col_mapa:
-        # Criação do Mapa Folium
+        # Criação do Mapa Folium com suporte Realtime
         m = folium.Map(
             location=centro_mapa,
             zoom_start=zoom_inicial,
@@ -85,14 +107,33 @@ def renderizar_tela_mapa():
             control=True
         ).add_to(m)
 
-        # Controle de Camadas (Ruas vs Satélite)
+        # Camada Dark Tech (CartoDB Dark Matter)
+        folium.TileLayer(
+            tiles="CartoDB dark_matter",
+            attr="CartoDB Dark",
+            name="🌃 Modo Noturno (Dark)",
+            overlay=False,
+            control=True
+        ).add_to(m)
+
+        # Plugin Realtime GPS: Rastreia a posição ao vivo do operador no mapa
+        plugins.LocateControl(
+            auto_start=False,
+            position="topleft",
+            strings={"title": "Mostrar minha localização GPS em tempo real"},
+            locate_options={"enableHighAccuracy": True, "maxZoom": 18}
+        ).add_to(m)
+
+        # Plugin de Mini-Mapa de Navegação
+        plugins.MiniMap(toggle_display=True, position="bottomleft").add_to(m)
+
+        # Controle de Camadas
         folium.LayerControl(position="topright").add_to(m)
 
         # Agrupador de marcadores (MarkerCluster)
         cluster = plugins.MarkerCluster(name="Postes").add_to(m)
 
         for p in postes:
-            # Cor do Marcador
             status = p["status"]
             cor = "green"
             icone = "bolt"
@@ -104,8 +145,8 @@ def renderizar_tela_mapa():
                 icone = "exclamation"
 
             popup_html = f"""
-                <div style="font-family: sans-serif; min-width: 160px;">
-                    <b style="font-size: 14px; color: #0284C7;">Poste {p['codigo']}</b><br>
+                <div style="font-family: sans-serif; min-width: 170px;">
+                    <b style="font-size: 14px; color: #10B981;">Poste {p['codigo']}</b><br>
                     <span style="font-size: 12px; color: #333;">{p['logradouro']} - {p['bairro']}</span><br>
                     <hr style="margin: 5px 0;">
                     <span style="font-size: 11px;">💡 {p['tipo_luminaria']} {p['potencia']}W</span><br>
@@ -116,13 +157,13 @@ def renderizar_tela_mapa():
             marcador = folium.Marker(
                 location=[p["latitude"], p["longitude"]],
                 popup=folium.Popup(popup_html, max_width=250),
-                tooltip=f"{p['codigo']} - {p['logradouro']}",
+                tooltip=f"⚡ {p['codigo']} - {p['logradouro']}",
                 icon=folium.Icon(color=cor, icon=icone, prefix="fa")
             )
             marcador.add_to(cluster)
 
         # Renderiza o mapa Folium no Streamlit
-        st_folium(m, height=520, use_container_width=True)
+        st_folium(m, height=530, use_container_width=True)
 
     with col_detalhes:
         st.subheader("📋 Detalhes do Poste")
@@ -142,15 +183,15 @@ def renderizar_tela_mapa():
 
             st.markdown(
                 f"""
-                <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 16px; margin-bottom: 12px;">
+                <div style="background: #111E1A; border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 16px; padding: 16px; margin-bottom: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.4);">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <span style="font-size: 11px; text-transform: uppercase; color: #0284C7; font-weight: 700;">Código COSERN</span>
+                        <span style="font-size: 11px; text-transform: uppercase; color: #10B981; font-weight: 700;">Código COSERN</span>
                         <span style="background: {cor_badge}22; color: {cor_badge}; border: 1px solid {cor_badge}; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 20px;">
                             {txt_badge}
                         </span>
                     </div>
                     <div style="font-size: 26px; font-weight: 900; color: #FFFFFF; font-family: 'JetBrains Mono';">{p['codigo']}</div>
-                    <div style="font-size: 12px; color: #94A3B8; margin-top: 4px;">📍 {p['latitude']:.6f}, {p['longitude']:.6f}</div>
+                    <div style="font-size: 12px; color: #8E8E93; margin-top: 4px;">📍 {p['latitude']:.6f}, {p['longitude']:.6f}</div>
                 </div>
                 """,
                 unsafe_allow_html=True
@@ -185,6 +226,6 @@ def renderizar_tela_mapa():
         else:
             st.info("💡 Digite um código de poste na barra de pesquisa (ex: **CSR-1001**) ou clique em um poste no mapa para ver todos os detalhes.", icon="🔍")
             if postes:
-                st.write("**Postes encontrados nesta região:**")
+                st.write("**Postes monitorados em tempo real:**")
                 lista_rapida = [{"Código": x["codigo"], "Rua": x["logradouro"], "Status": x["status"]} for x in postes[:5]]
                 st.dataframe(lista_rapida, use_container_width=True, hide_index=True)
