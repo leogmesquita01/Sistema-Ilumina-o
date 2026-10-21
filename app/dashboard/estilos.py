@@ -99,63 +99,107 @@ def aplicar_estilos() -> None:
         }
 
         /* =========================================================
-           MODERN UNIFIED SIDEBAR (NO GHOST RECTANGLE)
+           FLOATING SIDEBAR ISLAND (CLEAN OUTER SHELL)
            ========================================================= */
-        section[data-testid="stSidebar"] {
-            background: linear-gradient(180deg, #0D1522 0%, #090E17 100%) !important;
-            border-right: 1px solid rgba(16, 185, 129, 0.22) !important;
-            box-shadow: 8px 0 32px rgba(0, 0, 0, 0.55) !important;
-            padding: 0 !important;
-            margin: 0 !important;
-        }
-
-        section[data-testid="stSidebar"] > div,
-        section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
+        section[data-testid="stSidebar"],
+        section.stSidebar,
+        [data-testid="stSidebar"] {
+            background-color: transparent !important;
             background: transparent !important;
             border: none !important;
-            border-radius: 0 !important;
+            border-right: none !important;
             box-shadow: none !important;
-            height: 100vh !important;
-            max-height: 100vh !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            padding: 14px 10px 14px 14px !important;
+            box-sizing: border-box !important;
+            overflow: visible !important;
+            z-index: 100 !important;
+        }
+
+        section[data-testid="stSidebar"]::before,
+        section[data-testid="stSidebar"]::after {
+            display: none !important;
+            content: none !important;
+            box-shadow: none !important;
+            background: transparent !important;
+        }
+
+        section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
+            background: linear-gradient(180deg, #0F1826 0%, #0B121D 100%) !important;
+            border: 1px solid rgba(16, 185, 129, 0.28) !important;
+            border-radius: 24px !important;
+            height: calc(100vh - 28px) !important;
+            max-height: calc(100vh - 28px) !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
             display: flex !important;
             flex-direction: column !important;
+            position: relative !important;
+            overflow: visible !important;
         }
 
         section[data-testid="stSidebar"] [data-testid="stSidebarHeader"] {
             background: transparent !important;
-            padding: 12px 14px 0 14px !important;
+            padding: 0 !important;
             margin: 0 !important;
-            min-height: 36px !important;
-            display: flex !important;
-            justify-content: flex-end !important;
-            align-items: center !important;
+            height: 0 !important;
+            min-height: 0 !important;
+            position: absolute !important;
+            top: 0 !important;
+            right: 0 !important;
+            width: 0 !important;
+            overflow: visible !important;
+            z-index: 9999 !important;
         }
 
         section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {
-            padding: 0.4rem 1.25rem 1.5rem 1.25rem !important;
+            padding: 1.4rem 1.15rem !important;
             overflow-y: auto !important;
             overflow-x: hidden !important;
             height: 100% !important;
             display: flex !important;
             flex-direction: column !important;
+            border-radius: 24px !important;
+        }
+
+        [data-testid="stSidebarCollapseButton"] {
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
+            position: absolute !important;
+            right: -13px !important;
+            top: 26px !important;
+            z-index: 999999 !important;
+            width: 26px !important;
+            height: 26px !important;
         }
 
         [data-testid="stSidebarCollapseButton"] button {
             display: inline-flex !important;
             align-items: center !important;
             justify-content: center !important;
-            width: 28px !important;
-            height: 28px !important;
-            border-radius: 8px !important;
-            background-color: rgba(255, 255, 255, 0.04) !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            width: 26px !important;
+            height: 26px !important;
+            border-radius: 50% !important;
+            background-color: #131F31 !important;
+            border: 1px solid rgba(16, 185, 129, 0.35) !important;
             cursor: pointer !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8) !important;
             transition: all 0.2s ease !important;
         }
 
         [data-testid="stSidebarCollapseButton"] button:hover {
-            background-color: rgba(16, 185, 129, 0.15) !important;
-            border-color: rgba(16, 185, 129, 0.45) !important;
+            background-color: #172A3A !important;
+            border-color: #10B981 !important;
+            transform: scale(1.1);
+            box-shadow: 0 0 14px rgba(16, 185, 129, 0.4) !important;
+        }
+
+        [data-testid="stSidebarCollapseButton"] button * {
+            font-size: 13px !important;
+            color: #94A3B8 !important;
+            fill: #94A3B8 !important;
         }
 
         /* Sidebar Navigation Pills (Remove radio circle & widget label) */
@@ -175,13 +219,13 @@ def aplicar_estilos() -> None:
 
         section[data-testid="stSidebar"] div[data-testid="stRadio"] label {
             width: 100% !important;
-            background: rgba(255, 255, 255, 0.02) !important;
-            border: 1px solid rgba(255, 255, 255, 0.05) !important;
+            background: transparent !important;
+            border: 1px solid transparent !important;
             border-radius: 12px !important;
-            padding: 11px 14px !important;
+            padding: 10px 13px !important;
             margin: 0 !important;
             cursor: pointer !important;
-            transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
             display: flex !important;
             align-items: center !important;
         }
@@ -189,7 +233,7 @@ def aplicar_estilos() -> None:
         section[data-testid="stSidebar"] div[data-testid="stRadio"] label p {
             font-family: 'Plus Jakarta Sans', sans-serif !important;
             font-size: 0.9rem !important;
-            font-weight: 600 !important;
+            font-weight: 500 !important;
             color: #94A3B8 !important;
             margin: 0 !important;
             display: flex !important;
@@ -199,8 +243,8 @@ def aplicar_estilos() -> None:
         }
 
         section[data-testid="stSidebar"] div[data-testid="stRadio"] label:hover {
-            background: rgba(255, 255, 255, 0.05) !important;
-            border-color: rgba(255, 255, 255, 0.12) !important;
+            background: rgba(255, 255, 255, 0.04) !important;
+            border-color: rgba(255, 255, 255, 0.06) !important;
         }
 
         section[data-testid="stSidebar"] div[data-testid="stRadio"] label:hover p {
@@ -208,13 +252,13 @@ def aplicar_estilos() -> None:
         }
 
         section[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked) {
-            background: linear-gradient(90deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.05) 100%) !important;
-            border: 1px solid rgba(16, 185, 129, 0.45) !important;
-            box-shadow: 0 4px 16px rgba(16, 185, 129, 0.14) !important;
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.18) 0%, rgba(16, 185, 129, 0.05) 100%) !important;
+            border: 1px solid rgba(16, 185, 129, 0.4) !important;
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.14) !important;
         }
 
         section[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked) p {
-            color: #34D399 !important;
+            color: #10B981 !important;
             font-weight: 700 !important;
         }
 
