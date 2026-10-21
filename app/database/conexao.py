@@ -1,17 +1,57 @@
 """
-Gerenciador de Conexão com o Banco de Dados SQLite
+Gerenciador de Conexão com o Banco de Dados (Supabase Cloud + Fallback SQLite Local)
 """
 
 import sqlite3
 import os
 from pathlib import Path
+from typing import Optional
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+load_dotenv(BASE_DIR / ".env")
+
 DB_DIR = BASE_DIR / "data"
 DB_PATH = DB_DIR / "postes_boasaude.db"
 
+DEFAULT_SUPABASE_URL = "https://mizjurmvnjovmpcnferf.supabase.co"
+DEFAULT_SUPABASE_KEY = "sb_publishable_2U9j0LN5usYKCMI31-hslA_bfGsBU3B"
+
+_supabase_client = None
+
+
+def obter_supabase():
+    """Retorna o cliente autenticado do Supabase (se configurado)."""
+    global _supabase_client
+    if _supabase_client is not None:
+        return _supabase_client
+
+    url = os.getenv("SUPABASE_URL", DEFAULT_SUPABASE_URL)
+    key = os.getenv("SUPABASE_KEY", DEFAULT_SUPABASE_KEY)
+
+    # Tenta ler de st.secrets caso esteja hospedado no Streamlit Cloud
+    try:
+        import streamlit as st
+        if not url and "SUPABASE_URL" in st.secrets:
+            url = st.secrets["SUPABASE_URL"]
+        if not key and "SUPABASE_KEY" in st.secrets:
+            key = st.secrets["SUPABASE_KEY"]
+    except Exception:
+        pass
+
+    if url and key:
+        try:
+            from supabase import create_client
+            _supabase_client = create_client(url, key)
+            return _supabase_client
+        except Exception as e:
+            print(f"Aviso: falha ao inicializar cliente Supabase ({e}). Usando SQLite local.")
+            return None
+    return None
+
+
 def obter_conexao() -> sqlite3.Connection:
-    """Retorna uma conexão com o banco SQLite."""
+    """Retorna uma conexão com o banco SQLite local (fallback)."""
     DB_DIR.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -19,8 +59,9 @@ def obter_conexao() -> sqlite3.Connection:
     conn.execute("PRAGMA foreign_keys = ON;")
     return conn
 
+
 def inicializar_banco():
-    """Garante que as tabelas necessárias existam."""
+    """Garante que as tabelas locais de fallback existam e valida conexão Supabase."""
     conn = obter_conexao()
     cursor = conn.cursor()
 
@@ -69,6 +110,8 @@ def inicializar_banco():
     conn.commit()
     conn.close()
 
+
 if __name__ == "__main__":
     inicializar_banco()
-    print("Banco inicializado com sucesso!")
+    sb = obter_supabase()
+    print("Banco inicializado com sucesso! Supabase ativo:", sb is not None)

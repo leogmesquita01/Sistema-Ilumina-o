@@ -1,15 +1,48 @@
 """
-Serviço de Ordens de Serviço e Solicitação de Materiais
+Serviço de Ordens de Serviço e Solicitação de Materiais (Supabase Cloud + Fallback SQLite)
 """
 
 from typing import List, Dict, Any, Optional
 import json
+import datetime
 import urllib.parse
-from app.database.conexao import obter_conexao
+from app.database.conexao import obter_conexao, obter_supabase
 from app.servicos.dados_postes import atualizar_status_poste
+
 
 def listar_ordens(filtro_status: Optional[str] = None) -> List[Dict[str, Any]]:
     """Retorna todas as ordens de serviço cadastradas."""
+    sb = obter_supabase()
+    if sb:
+        try:
+            query = sb.table("ordens_servico").select("*, postes(logradouro, bairro, latitude, longitude, tipo_luminaria, potencia)").order("id", desc=True)
+            if filtro_status and filtro_status != "Todos":
+                query = query.eq("status", filtro_status)
+            res = query.execute()
+            rows = res.data or []
+            resultado = []
+            for r in rows:
+                item = dict(r)
+                poste_rel = item.pop("postes", None) or {}
+                item["logradouro"] = poste_rel.get("logradouro", "")
+                item["bairro"] = poste_rel.get("bairro", "")
+                item["latitude"] = poste_rel.get("latitude", 0.0)
+                item["longitude"] = poste_rel.get("longitude", 0.0)
+                item["tipo_luminaria"] = poste_rel.get("tipo_luminaria", "LED")
+                item["potencia"] = poste_rel.get("potencia", 100)
+
+                if item.get("materiais"):
+                    try:
+                        item["materiais_lista"] = json.loads(item["materiais"]) if isinstance(item["materiais"], str) else item["materiais"]
+                    except Exception:
+                        item["materiais_lista"] = []
+                else:
+                    item["materiais_lista"] = []
+                resultado.append(item)
+            return resultado
+        except Exception as e:
+            print(f"Aviso ao listar ordens no Supabase: {e}")
+
     conn = obter_conexao()
     cursor = conn.cursor()
 
@@ -42,6 +75,7 @@ def listar_ordens(filtro_status: Optional[str] = None) -> List[Dict[str, Any]]:
 
     return resultado
 
+
 def criar_ordem_servico(
     codigo_poste: str,
     defeito: str,
@@ -51,16 +85,35 @@ def criar_ordem_servico(
     observacoes: str = ""
 ) -> str:
     """Cria uma nova ordem de serviço e atualiza o status do poste."""
+    materiais_json = json.dumps(materiais if materiais else [])
+    novo_status = "urgente" if prioridade == "Urgente" else "chamado_aberto"
+
+    sb = obter_supabase()
+    if sb:
+        res_count = sb.table("ordens_servico").select("id", count="exact").execute()
+        total = (res_count.count or len(res_count.data or [])) + 1
+        protocolo = f"OS-2026-{total:04d}"
+
+        sb.table("ordens_servico").insert({
+            "protocolo": protocolo,
+            "codigo_poste": codigo_poste,
+            "defeito": defeito,
+            "prioridade": prioridade,
+            "materiais": materiais_json,
+            "solicitante": solicitante,
+            "status": "aberta",
+            "observacoes": observacoes,
+        }).execute()
+
+        atualizar_status_poste(codigo_poste, novo_status)
+        return protocolo
+
     conn = obter_conexao()
     cursor = conn.cursor()
 
-    # Gera número de protocolo anual sequencial
     cursor.execute("SELECT COUNT(*) FROM ordens_servico;")
     total = cursor.fetchone()[0] + 1
     protocolo = f"OS-{2026}-{total:04d}"
-
-    materiais_json = json.dumps(materiais if materiais else [])
-    novo_status = "urgente" if prioridade == "Urgente" else "chamado_aberto"
 
     cursor.execute("""
         INSERT INTO ordens_servico (
@@ -71,7 +124,6 @@ def criar_ordem_servico(
         materiais_json, solicitante, observacoes
     ))
 
-    # Atualiza status do poste
     cursor.execute("UPDATE postes SET status = ?, data_atualizacao = CURRENT_TIMESTAMP WHERE codigo = ?;",
                    (novo_status, codigo_poste))
 
@@ -79,8 +131,23 @@ def criar_ordem_servico(
     conn.close()
     return protocolo
 
+
 def concluir_ordem_servico(protocolo: str):
     """Marca uma ordem como concluída e restaura o status do poste para 'normal'."""
+    sb = obter_supabase()
+    if sb:
+        res = sb.table("ordens_servico").select("codigo_poste").eq("protocolo", protocolo).limit(1).execute()
+        if not res.data:
+            return
+        codigo_poste = res.data[0]["codigo_poste"]
+        agora = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        sb.table("ordens_servico").update({
+            "status": "concluida",
+            "data_conclusao": agora
+        }).eq("protocolo", protocolo).execute()
+        atualizar_status_poste(codigo_poste, "normal")
+        return
+
     conn = obter_conexao()
     cursor = conn.cursor()
 
@@ -98,11 +165,11 @@ def concluir_ordem_servico(protocolo: str):
         WHERE protocolo = ?;
     """, (protocolo,))
 
-    # Restaura o poste para operação normal
     cursor.execute("UPDATE postes SET status = 'normal', data_atualizacao = CURRENT_TIMESTAMP WHERE codigo = ?;", (codigo_poste,))
 
     conn.commit()
     conn.close()
+
 
 def gerar_mensagem_whatsapp(
     protocolo: str,

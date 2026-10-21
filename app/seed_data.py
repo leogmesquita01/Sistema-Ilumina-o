@@ -4,7 +4,8 @@ Cadastra postes e ordens de serviço realistas no município de Boa Saúde / RN
 para demonstração e testes imediatos.
 """
 
-from app.database.conexao import obter_conexao as get_connection, inicializar_banco as init_db
+from app.database.conexao import obter_conexao as get_connection, inicializar_banco as init_db, obter_supabase
+
 
 # Postes de exemplo baseados na malha urbana e comunidades de Boa Saúde / RN
 SAMPLE_POSTES = [
@@ -207,6 +208,22 @@ SAMPLE_ORDENS = [
 def seed_database():
     """Popula o banco com os postes de exemplo caso esteja vazio."""
     init_db()
+
+    # 1. Popula Supabase se configurado e vazio
+    sb = obter_supabase()
+    if sb:
+        try:
+            res = sb.table("postes").select("id", count="exact").limit(1).execute()
+            total_sb = res.count if res.count is not None else len(res.data or [])
+            if total_sb == 0:
+                print("Populando Supabase com postes iniciais de Boa Saúde/RN...")
+                sb.table("postes").upsert(SAMPLE_POSTES, on_conflict="codigo").execute()
+                sb.table("ordens_servico").upsert(SAMPLE_ORDENS, on_conflict="protocolo").execute()
+                print(f"Supabase populado com {len(SAMPLE_POSTES)} postes e {len(SAMPLE_ORDENS)} ordens de serviço!")
+        except Exception as e:
+            print(f"Aviso ao popular Supabase inicial: {e}")
+
+    # 2. Popula SQLite local de fallback se vazio
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -214,7 +231,7 @@ def seed_database():
     count = cursor.fetchone()[0]
 
     if count == 0:
-        print("Populando banco com postes de Boa Saúde/RN...")
+        print("Populando banco local com postes de Boa Saúde/RN...")
         for p in SAMPLE_POSTES:
             cursor.execute("""
                 INSERT OR IGNORE INTO postes (
@@ -239,11 +256,12 @@ def seed_database():
             ))
 
         conn.commit()
-        print(f"Banco populado com {len(SAMPLE_POSTES)} postes e {len(SAMPLE_ORDENS)} ordens de serviço!")
+        print(f"Banco local populado com {len(SAMPLE_POSTES)} postes e {len(SAMPLE_ORDENS)} ordens de serviço!")
     else:
-        print(f"O banco já possui {count} postes cadastrados.")
+        print(f"O banco local já possui {count} postes cadastrados.")
 
     conn.close()
 
 if __name__ == "__main__":
     seed_database()
+

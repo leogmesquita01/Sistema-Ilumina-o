@@ -1,14 +1,13 @@
 """
 Módulo de Importação de Arquivos da COSERN / ANEEL
 Capaz de ler planilhas Excel (.xlsx, .xls) e arquivos CSV, identificar colunas automaticamente
-mesmo com nomes variados e salvar os postes no banco SQLite.
+mesmo com nomes variados e salvar os postes no banco Supabase (ou SQLite local).
 """
 
 import pandas as pd
 import io
-import json
-from typing import Dict, Any, List, Tuple
-from app.database.conexao import obter_conexao as get_connection
+from typing import Dict, Any, List
+from app.database.conexao import obter_conexao as get_connection, obter_supabase
 
 # Sinônimos comuns de cabeçalhos nas planilhas de concessionárias
 COLUMN_SYNONYMS = {
@@ -24,6 +23,7 @@ COLUMN_SYNONYMS = {
     "tipo_braco": ["tipo_braco", "braco", "suporte", "tam_braco"],
 }
 
+
 def clean_coordinate(val: Any) -> float:
     """Limpa e converte strings de coordenadas, tratando vírgulas brasileiras (-6,160 -> -6.160)."""
     if pd.isna(val):
@@ -33,14 +33,14 @@ def clean_coordinate(val: Any) -> float:
     s = str(val).strip().replace(",", ".")
     return float(s)
 
+
 def identify_columns(df_columns: List[str]) -> Dict[str, str]:
     """Identifica as melhores colunas do dataframe correspondentes ao nosso modelo."""
     mapping = {}
     normalized_cols = {str(col).strip().lower(): col for col in df_columns}
-    
+
     for standard_name, synonyms in COLUMN_SYNONYMS.items():
         for syn in synonyms:
-            # Busca exata ou que contenha a palavra
             matched = None
             for norm_name, original_name in normalized_cols.items():
                 if syn == norm_name or syn in norm_name:
@@ -49,18 +49,18 @@ def identify_columns(df_columns: List[str]) -> Dict[str, str]:
             if matched:
                 mapping[standard_name] = matched
                 break
-                
+
     return mapping
+
 
 def import_poles_file(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     """
     Lê o arquivo de planilha (Excel ou CSV) e insere ou atualiza os postes no banco de dados.
     """
     filename_lower = filename.lower()
-    
+
     # 1. Carrega o arquivo com Pandas
     if filename_lower.endswith(".csv"):
-        # Tenta detectar separador vírgula ou ponto-e-vírgula
         try:
             df = pd.read_csv(io.BytesIO(file_bytes), sep=None, engine="python", encoding="utf-8")
         except UnicodeDecodeError:
@@ -78,20 +78,21 @@ def import_poles_file(file_bytes: bytes, filename: str) -> Dict[str, Any]:
 
     if "codigo" not in col_map or "latitude" not in col_map or "longitude" not in col_map:
         missing = []
-        if "codigo" not in col_map: missing.append("Código/Plaqueta")
-        if "latitude" not in col_map: missing.append("Latitude")
-        if "longitude" not in col_map: missing.append("Longitude")
-        raise ValueError(f"Não foi possível identificar as colunas obrigatórias: {', '.join(missing)}. Colunas encontradas: {list(df.columns)}")
+        if "codigo" not in col_map:
+            missing.append("Código/Plaqueta")
+        if "latitude" not in col_map:
+            missing.append("Latitude")
+        if "longitude" not in col_map:
+            missing.append("Longitude")
+        raise ValueError(
+            f"Não foi possível identificar as colunas obrigatórias: {', '.join(missing)}. Colunas encontradas: {list(df.columns)}"
+        )
 
-    # 3. Processa e insere registros no SQLite
-    conn = get_connection()
-    cursor = conn.cursor()
-    
     total_linhas = len(df)
     importados = 0
-    atualizados = 0
     erros = 0
     detalhes_erros = []
+    lote_postes = []
 
     for idx, row in df.iterrows():
         try:
@@ -106,10 +107,8 @@ def import_poles_file(file_bytes: bytes, filename: str) -> Dict[str, Any]:
             logradouro = str(row[col_map["logradouro"]]).strip() if "logradouro" in col_map and not pd.isna(row[col_map["logradouro"]]) else "Não informado"
             bairro = str(row[col_map["bairro"]]).strip() if "bairro" in col_map and not pd.isna(row[col_map["bairro"]]) else "Centro"
             referencia = str(row[col_map["referencia"]]).strip() if "referencia" in col_map and not pd.isna(row[col_map["referencia"]]) else ""
-            
             tipo_luminaria = str(row[col_map["tipo_luminaria"]]).strip() if "tipo_luminaria" in col_map and not pd.isna(row[col_map["tipo_luminaria"]]) else "LED"
-            
-            # Tratamento de potência numérica
+
             potencia = 100
             if "potencia" in col_map and not pd.isna(row[col_map["potencia"]]):
                 try:
@@ -120,31 +119,68 @@ def import_poles_file(file_bytes: bytes, filename: str) -> Dict[str, Any]:
             tipo_poste = str(row[col_map["tipo_poste"]]).strip() if "tipo_poste" in col_map and not pd.isna(row[col_map["tipo_poste"]]) else "Concreto Duplo T"
             tipo_braco = str(row[col_map["tipo_braco"]]).strip() if "tipo_braco" in col_map and not pd.isna(row[col_map["tipo_braco"]]) else "Braço Médio 2m"
 
-            # INSERT OR REPLACE (Atualiza se já existir)
-            cursor.execute("""
-                INSERT INTO postes (
-                    codigo, latitude, longitude, logradouro, bairro, referencia,
-                    tipo_luminaria, potencia, tipo_poste, tipo_braco, status, data_atualizacao
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'normal', CURRENT_TIMESTAMP)
-                ON CONFLICT(codigo) DO UPDATE SET
-                    latitude = excluded.latitude,
-                    longitude = excluded.longitude,
-                    logradouro = excluded.logradouro,
-                    bairro = excluded.bairro,
-                    referencia = excluded.referencia,
-                    tipo_luminaria = excluded.tipo_luminaria,
-                    potencia = excluded.potencia,
-                    tipo_poste = excluded.tipo_poste,
-                    tipo_braco = excluded.tipo_braco,
-                    data_atualizacao = CURRENT_TIMESTAMP;
-            """, (codigo, lat, lng, logradouro, bairro, referencia, tipo_luminaria, potencia, tipo_poste, tipo_braco))
-
+            lote_postes.append({
+                "codigo": codigo,
+                "latitude": lat,
+                "longitude": lng,
+                "logradouro": logradouro,
+                "bairro": bairro,
+                "referencia": referencia,
+                "tipo_luminaria": tipo_luminaria,
+                "potencia": potencia,
+                "tipo_poste": tipo_poste,
+                "tipo_braco": tipo_braco,
+                "status": "normal",
+            })
             importados += 1
         except Exception as e:
             erros += 1
             if len(detalhes_erros) < 5:
                 detalhes_erros.append(f"Linha {idx + 2}: {str(e)}")
+
+    # 3. Salva no Supabase (em lotes) se configurado
+    sb = obter_supabase()
+    if sb and lote_postes:
+        tamanho_lote = 500
+        for i in range(0, len(lote_postes), tamanho_lote):
+            chunk = lote_postes[i:i + tamanho_lote]
+            sb.table("postes").upsert(chunk, on_conflict="codigo").execute()
+        return {
+            "sucesso": True,
+            "total_linhas": total_linhas,
+            "importados": importados,
+            "erros": erros,
+            "detalhes_erros": detalhes_erros,
+            "colunas_identificadas": col_map,
+        }
+
+    # 4. Fallback SQLite local
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    for p in lote_postes:
+        cursor.execute("""
+            INSERT INTO postes (
+                codigo, latitude, longitude, logradouro, bairro, referencia,
+                tipo_luminaria, potencia, tipo_poste, tipo_braco, status, data_atualizacao
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'normal', CURRENT_TIMESTAMP)
+            ON CONFLICT(codigo) DO UPDATE SET
+                latitude = excluded.latitude,
+                longitude = excluded.longitude,
+                logradouro = excluded.logradouro,
+                bairro = excluded.bairro,
+                referencia = excluded.referencia,
+                tipo_luminaria = excluded.tipo_luminaria,
+                potencia = excluded.potencia,
+                tipo_poste = excluded.tipo_poste,
+                tipo_braco = excluded.tipo_braco,
+                data_atualizacao = CURRENT_TIMESTAMP;
+        """, (
+            p["codigo"], p["latitude"], p["longitude"], p["logradouro"],
+            p["bairro"], p["referencia"], p["tipo_luminaria"], p["potencia"],
+            p["tipo_poste"], p["tipo_braco"]
+        ))
 
     conn.commit()
     conn.close()
@@ -155,5 +191,5 @@ def import_poles_file(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         "importados": importados,
         "erros": erros,
         "detalhes_erros": detalhes_erros,
-        "colunas_identificadas": col_map
+        "colunas_identificadas": col_map,
     }
