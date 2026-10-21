@@ -3,6 +3,7 @@ import streamlit.components.v1 as components
 import folium
 from folium import plugins
 import datetime
+import urllib.parse
 from collections import Counter
 from app.servicos.dados_postes import listar_postes, obter_resumo_indicadores, obter_poste_por_codigo
 
@@ -26,18 +27,20 @@ def renderizar_tela_mapa():
     os_abertas = stats["os_abertas"]
     os_concluidas = stats["os_concluidas"]
 
-    if total_chamados > 0:
+    if total_postes == 0:
+        finding_texto = "Base pronta para receber o cadastro ou importação dos postes anotados pelo município."
+    elif total_chamados > 0:
         finding_texto = (
             f"{total_chamados} postes aguardam manutenção na rede municipal ({os_abertas} O.S. em aberto)."
         )
     else:
-        finding_texto = "Todos os postes mapeados operam sem chamados pendentes."
+        finding_texto = "Todos os postes cadastrados operam sem chamados pendentes."
 
     st.markdown(
         f"""
         <div class="page-header">
             <div>
-                <h1 class="page-title">Mapa da rede e ativos COSERN</h1>
+                <h1 class="page-title">Mapa da rede e postes cadastrados</h1>
                 <p class="page-subtitle">{finding_texto}</p>
             </div>
             <div class="page-meta">
@@ -54,12 +57,12 @@ def renderizar_tela_mapa():
         f"""
         <div class="kpi-strip">
             <div class="kpi-cell">
-                <div class="kpi-label">Postes mapeados</div>
+                <div class="kpi-label">Postes cadastrados</div>
                 <div class="kpi-value-row">
                     <span class="kpi-value lead">{total_postes:,}</span>
                     <span class="kpi-unit">ativos</span>
                 </div>
-                <div class="kpi-sub">Base georreferenciada COSERN</div>
+                <div class="kpi-sub">Base própria da Secretaria</div>
             </div>
             <div class="kpi-cell">
                 <div class="kpi-label">Cobertura em LED</div>
@@ -94,8 +97,8 @@ def renderizar_tela_mapa():
 
     with col_busca:
         busca_termo = st.text_input(
-            "Buscar por plaqueta ou logradouro",
-            placeholder="Ex: CSR-1001, CSR-1004, Rua Manoel Cirilo...",
+            "Buscar por código, rua ou bairro",
+            placeholder="Digite o código anotado, nome da rua ou comunidade...",
         )
 
     with col_filtro:
@@ -248,7 +251,7 @@ def renderizar_tela_mapa():
                 <div class="panel-card">
                     <div class="panel-header">
                         <div>
-                            <div style="font-size: 11.5px; color: #8a8c92;">Plaqueta COSERN</div>
+                            <div style="font-size: 11.5px; color: #8a8c92;">Identificação do poste</div>
                             <div class="mono" style="font-size: 20px; font-weight: 600; color: #ffffff; margin-top: 2px;">{p_completo['codigo']}</div>
                         </div>
                         {pill_html}
@@ -295,12 +298,12 @@ def renderizar_tela_mapa():
                     unsafe_allow_html=True,
                 )
 
-            import urllib.parse
             if round(float(p_completo.get("latitude", -6.1611)), 4) != -6.1611 or round(float(p_completo.get("longitude", -35.6025)), 4) != -35.6025:
                 maps_url = f"https://www.google.com/maps/dir/?api=1&destination={p_completo['latitude']},{p_completo['longitude']}"
             else:
                 end_q = urllib.parse.quote(f"{p_completo.get('logradouro', '')}, {p_completo.get('bairro', '')}, Boa Saúde - RN")
                 maps_url = f"https://www.google.com/maps/dir/?api=1&destination={end_q}"
+
             c_btn1, c_btn2 = st.columns(2)
             with c_btn1:
                 if st.button("Abrir O.S. de reparo", type="primary", use_container_width=True):
@@ -335,7 +338,7 @@ def renderizar_tela_mapa():
                         <span class="panel-title">Distribuição por localidade</span>
                         <span class="panel-meta">{len(postes)} exibidos</span>
                     </div>
-                    {barras_html if barras_html else '<div style="color: #8a8c92; font-size: 13px;">Nenhum poste no filtro atual.</div>'}
+                    {barras_html if barras_html else '<div style="color: #8a8c92; font-size: 13px;">Nenhum poste cadastrado ainda.</div>'}
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -346,39 +349,50 @@ def renderizar_tela_mapa():
                 key=lambda x: 0 if x["status"] in ("urgente", "defeito_urgente") else (1 if x["status"] == "chamado_aberto" else 2),
             )[:6]
 
-            linhas_tabela = ""
-            for item in postes_prioritarios:
-                pill = _status_pill_html(item["status"])
-                linhas_tabela += (
-                    '<tr>'
-                    f'<td class="mono" style="font-weight: 500;">{item["codigo"]}</td>'
-                    f'<td>{item["logradouro"]}<div style="font-size: 11.5px; color: #8a8c92;">{item["bairro"]}</div></td>'
-                    f'<td class="num">{item["potencia"]}W</td>'
-                    f'<td style="text-align: right;">{pill}</td>'
-                    '</tr>'
-                )
+            if postes_prioritarios:
+                linhas_tabela = ""
+                for item in postes_prioritarios:
+                    pill = _status_pill_html(item["status"])
+                    linhas_tabela += (
+                        '<tr>'
+                        f'<td class="mono" style="font-weight: 500;">{item["codigo"]}</td>'
+                        f'<td>{item["logradouro"]}<div style="font-size: 11.5px; color: #8a8c92;">{item["bairro"]}</div></td>'
+                        f'<td class="num">{item["potencia"]}W</td>'
+                        f'<td style="text-align: right;">{pill}</td>'
+                        '</tr>'
+                    )
 
-            st.markdown(
-                f"""
-                <div class="panel-card">
-                    <div class="panel-header">
-                        <span class="panel-title">Ativos prioritários</span>
-                        <span class="panel-meta">Ordens e alertas</span>
+                st.markdown(
+                    f"""
+                    <div class="panel-card">
+                        <div class="panel-header">
+                            <span class="panel-title">Postes cadastrados</span>
+                            <span class="panel-meta">Recentes e prioritários</span>
+                        </div>
+                        <table class="clean-table">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Localização</th>
+                                    <th class="num">Potência</th>
+                                    <th style="text-align: right;">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {linhas_tabela}
+                            </tbody>
+                        </table>
                     </div>
-                    <table class="clean-table">
-                        <thead>
-                            <tr>
-                                <th>Plaqueta</th>
-                                <th>Localização</th>
-                                <th class="num">Potência</th>
-                                <th style="text-align: right;">Estado</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {linhas_tabela}
-                        </tbody>
-                    </table>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+                    """,
+                    unsafe_allow_html=True,
+                )
+            else:
+                c_ac1, c_ac2 = st.columns(2)
+                with c_ac1:
+                    if st.button("Cadastrar poste", type="primary", use_container_width=True):
+                        st.session_state["pagina_atual"] = ":material/add_location_alt: Cadastrar poste"
+                        st.rerun()
+                with c_ac2:
+                    if st.button("Importar planilha", use_container_width=True):
+                        st.session_state["pagina_atual"] = ":material/upload_file: Importar planilha"
+                        st.rerun()

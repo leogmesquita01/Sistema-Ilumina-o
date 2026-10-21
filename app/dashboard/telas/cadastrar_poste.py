@@ -8,7 +8,7 @@ def renderizar_tela_cadastrar():
         <div class="page-header">
             <div>
                 <h1 class="page-title">Cadastrar poste em campo</h1>
-                <p class="page-subtitle">Registro individual de ativo de iluminação pública na malha de Boa Saúde / RN.</p>
+                <p class="page-subtitle">Registro individual de ativo de iluminação pública na base própria do município.</p>
             </div>
             <div class="page-meta">
                 <span>Destino: <span class="mono" style="color: #ffffff;">Supabase · public.postes</span></span>
@@ -26,7 +26,7 @@ def renderizar_tela_cadastrar():
         )
         c1, c2 = st.columns(2)
         with c1:
-            codigo = st.text_input("Código da plaqueta COSERN", placeholder="Ex: CSR-1099")
+            codigo = st.text_input("Código / Identificação do poste", placeholder="Ex: P-01, CSR-1099...")
             logradouro = st.text_input("Logradouro / Rua", placeholder="Ex: Rua Manoel Cirilo")
 
         with c2:
@@ -65,7 +65,7 @@ def renderizar_tela_cadastrar():
 
     if salvar:
         if not codigo or not codigo.strip():
-            st.error("Informe o código da plaqueta COSERN para registrar o poste.")
+            st.error("Informe o código de identificação para registrar o poste.")
             return
 
         try:

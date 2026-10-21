@@ -9,11 +9,11 @@ def renderizar_tela_importar():
         """
         <div class="page-header">
             <div>
-                <h1 class="page-title">Importar base cadastral COSERN</h1>
-                <p class="page-subtitle">Sincronização em lote de ativos de iluminação pública a partir de planilhas Excel ou CSV.</p>
+                <h1 class="page-title">Importar planilha de postes</h1>
+                <p class="page-subtitle">Carregue a relação de postes já anotados pela equipe em Excel ou CSV para alimentar a base.</p>
             </div>
             <div class="page-meta">
-                <span>Modo: <span class="mono" style="color: #ffffff;">Upsert por plaqueta</span></span>
+                <span>Modo: <span class="mono" style="color: #ffffff;">Upsert por código</span></span>
                 <span>Tabelas: Supabase + Local</span>
             </div>
         </div>
@@ -28,11 +28,11 @@ def renderizar_tela_importar():
             """
             <div class="panel-card">
                 <div class="panel-header">
-                    <span class="panel-title">Arquivo da concessionária ou ANEEL</span>
+                    <span class="panel-title">Planilha de controle da equipe</span>
                     <span class="panel-meta">.xlsx · .xls · .csv</span>
                 </div>
                 <div style="font-size: 13px; color: #8a8c92; margin-bottom: 8px;">
-                    O importador reconhece cabeçalhos variados e atualiza automaticamente postes já existentes pelo código da plaqueta, sem exigir coordenadas.
+                    Envie sua planilha com os postes anotados em campo. O sistema identifica as colunas automaticamente e atualiza os registros sem exigir coordenadas.
                 </div>
             </div>
             """,
@@ -40,7 +40,7 @@ def renderizar_tela_importar():
         )
 
         arquivo = st.file_uploader(
-            "Selecione a planilha de ativos",
+            "Selecione a planilha de postes",
             type=["xlsx", "xls", "csv"],
         )
 
@@ -55,7 +55,7 @@ def renderizar_tela_importar():
                 unsafe_allow_html=True,
             )
 
-            if st.button("Processar e sincronizar ativos", type="primary", use_container_width=True):
+            if st.button("Processar e salvar postes", type="primary", use_container_width=True):
                 with st.spinner("Sincronizando registros com o banco de dados..."):
                     try:
                         conteudo = arquivo.read()
@@ -91,7 +91,7 @@ def renderizar_tela_importar():
 
     with c2:
         dados_exemplo = {
-            "CODIGO_POSTE": ["CSR-2001", "CSR-2002", "CSR-2003"],
+            "CODIGO_POSTE": ["P-001", "P-002", "P-003"],
             "LOGRADOURO": ["Rua Principal", "Travessa São Pedro", "Av. Brasil"],
             "BAIRRO": ["Centro", "Centro", "Bela Vista"],
             "REFERENCIA": ["Ao lado do colégio", "Próximo à praça", "Em frente ao posto"],
@@ -110,20 +110,20 @@ def renderizar_tela_importar():
             """
             <div class="panel-card">
                 <div class="panel-header">
-                    <span class="panel-title">Esquema de colunas aceito</span>
+                    <span class="panel-title">Colunas reconhecidas</span>
                     <span class="panel-meta">Mapeamento automático</span>
                 </div>
                 <table class="clean-table">
                     <thead>
                         <tr>
                             <th>Campo</th>
-                            <th>Cabeçalhos reconhecidos</th>
+                            <th>Cabeçalhos aceitos</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td>Plaqueta <span style="color: #e5566f;">*</span></td>
-                            <td class="mono" style="font-size: 11.5px; color: #8a8c92;">CODIGO, PLAQUETA, PONNOT</td>
+                            <td>Código <span style="color: #e5566f;">*</span></td>
+                            <td class="mono" style="font-size: 11.5px; color: #8a8c92;">CODIGO, POSTE, PLAQUETA, ID</td>
                         </tr>
                         <tr>
                             <td>Localização</td>
@@ -147,7 +147,7 @@ def renderizar_tela_importar():
         st.download_button(
             label="Baixar planilha modelo (.xlsx)",
             data=buffer,
-            file_name="modelo_postes_cosern.xlsx",
+            file_name="modelo_postes_boasaude.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True,
         )

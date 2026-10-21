@@ -8,7 +8,6 @@ sys.path.insert(0, str(BASE_DIR))
 import streamlit as st
 from app.dashboard.estilos import aplicar_estilos
 from app.database.conexao import inicializar_banco
-from app.seed_data import seed_database
 from app.servicos.dados_postes import obter_resumo_indicadores
 
 from app.dashboard.telas.mapa_postes import renderizar_tela_mapa
@@ -18,14 +17,13 @@ from app.dashboard.telas.importar_base import renderizar_tela_importar
 from app.dashboard.telas.cadastrar_poste import renderizar_tela_cadastrar
 
 st.set_page_config(
-    page_title="Ilumina Boa Saúde — COSERN",
+    page_title="Ilumina Boa Saúde",
     page_icon=":material/tungsten:",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 inicializar_banco()
-seed_database()
 aplicar_estilos()
 
 try:
@@ -36,11 +34,11 @@ try:
     total_chamados = stats["total_chamados"]
     os_abertas = stats["os_abertas"]
 except Exception:
-    total_postes = 12
-    total_led = 7
-    taxa_led = 58.3
-    total_chamados = 4
-    os_abertas = 2
+    total_postes = 0
+    total_led = 0
+    taxa_led = 0.0
+    total_chamados = 0
+    os_abertas = 0
 
 with st.sidebar:
     brand_html = (
@@ -55,7 +53,7 @@ with st.sidebar:
         'Ilumina Boa Saúde'
         '</div>'
         '<div style="font-size: 11.5px; color: #8a8c92; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">'
-        'Boa Saúde / RN · COSERN'
+        'Boa Saúde / RN · Infraestrutura'
         '</div>'
         '</div>'
         '</div>'
@@ -66,18 +64,14 @@ with st.sidebar:
         ":material/map: Mapa e postes",
         ":material/handyman: Solicitar reparo",
         ":material/assignment: Ordens de serviço",
-        ":material/upload_file: Importar base COSERN",
         ":material/add_location_alt: Cadastrar poste",
+        ":material/upload_file: Importar planilha",
     ]
 
     pagina_selecionada = st.session_state.get("pagina_atual", menu_opcoes[0])
-    # Compatibilidade caso alguma tela tenha gravado com capitalização antiga
     mapa_antigo = {
         ":material/map: Mapa e Postes": menu_opcoes[0],
-        ":material/handyman: Solicitar reparo": menu_opcoes[1],
-        ":material/assignment: Ordens de serviço": menu_opcoes[2],
-        ":material/upload_file: Importar base COSERN": menu_opcoes[3],
-        ":material/add_location_alt: Cadastrar poste": menu_opcoes[4],
+        ":material/upload_file: Importar base COSERN": menu_opcoes[4],
     }
     pagina_selecionada = mapa_antigo.get(pagina_selecionada, pagina_selecionada)
     idx_padrao = menu_opcoes.index(pagina_selecionada) if pagina_selecionada in menu_opcoes else 0
@@ -98,9 +92,9 @@ with st.sidebar:
     cor_chamados = "#e5566f" if total_chamados > 0 else "#8a8c92"
     well_html = (
         '<div style="background: #171719; border: 1px solid #222224; border-radius: 6px; padding: 12px 14px; margin-bottom: 16px;">'
-        '<div style="font-size: 12px; color: #8a8c92; margin-bottom: 10px; font-weight: 500;">Resumo da malha</div>'
+        '<div style="font-size: 12px; color: #8a8c92; margin-bottom: 10px; font-weight: 500;">Base municipal</div>'
         '<div style="display: flex; justify-content: space-between; align-items: baseline; padding: 5px 0; border-bottom: 1px solid #1b1a1f; font-size: 12.5px;">'
-        '<span style="color: #8a8c92;">Postes mapeados</span>'
+        '<span style="color: #8a8c92;">Postes cadastrados</span>'
         f'<span style="font-family: \'JetBrains Mono\', monospace; font-variant-numeric: tabular-nums; color: #ffffff; font-weight: 500;">{total_postes}</span>'
         '</div>'
         '<div style="display: flex; justify-content: space-between; align-items: baseline; padding: 5px 0; border-bottom: 1px solid #1b1a1f; font-size: 12.5px;">'
@@ -136,7 +130,7 @@ elif menu == ":material/handyman: Solicitar reparo":
     renderizar_tela_solicitar_reparo()
 elif menu == ":material/assignment: Ordens de serviço":
     renderizar_tela_ordens_servico()
-elif menu == ":material/upload_file: Importar base COSERN":
-    renderizar_tela_importar()
 elif menu == ":material/add_location_alt: Cadastrar poste":
     renderizar_tela_cadastrar()
+elif menu == ":material/upload_file: Importar planilha":
+    renderizar_tela_importar()
