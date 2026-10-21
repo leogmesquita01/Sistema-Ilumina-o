@@ -1,8 +1,3 @@
-"""
-Tela: Importar Base da COSERN / ANEEL
-Permite carregar planilhas de postes em Excel ou CSV e alimentar o banco de dados.
-"""
-
 import streamlit as st
 import pandas as pd
 import io
@@ -43,7 +38,6 @@ def renderizar_tela_importar():
         st.subheader("2. Modelo Padrão")
         st.write("Se ainda não tiver a planilha da COSERN formatada, você pode baixar nosso modelo pronto:")
 
-        # Gera modelo Excel em memória
         dados_exemplo = {
             "CODIGO_POSTE": ["CSR-2001", "CSR-2002", "CSR-2003"],
             "LATITUDE": [-6.1615, -6.1620, -6.1628],

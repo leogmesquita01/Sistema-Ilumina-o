@@ -1,8 +1,3 @@
-"""
-Tela: Mapa Realtime e Localizador de Postes (COSERN)
-Monitoramento em tempo real da rede de iluminação pública de Boa Saúde / RN.
-"""
-
 import streamlit as st
 import folium
 from folium import plugins
@@ -11,7 +6,6 @@ import datetime
 from app.servicos.dados_postes import listar_postes, obter_resumo_indicadores
 
 def renderizar_tela_mapa():
-    # Banner Hero com Status em Tempo Real
     hora_atual = datetime.datetime.now().strftime("%H:%M:%S")
     st.markdown(
         f"""
@@ -33,7 +27,6 @@ def renderizar_tela_mapa():
         unsafe_allow_html=True
     )
 
-    # 1. Cards de Indicadores Rápidos no Topo
     stats = obter_resumo_indicadores()
     c1, c2, c3, c4 = st.columns(4)
     with c1:
@@ -47,7 +40,6 @@ def renderizar_tela_mapa():
 
     st.markdown("---")
 
-    # 2. Controles de Tempo Real e Busca
     col_busca, col_filtro, col_realtime = st.columns([3, 1, 1])
     
     with col_busca:
@@ -66,10 +58,8 @@ def renderizar_tela_mapa():
     with col_realtime:
         modo_realtime = st.toggle("📡 Rastreio Realtime", value=True, help="Ativa controles de geolocalização e atualização dinâmica do mapa")
 
-    # 3. Consulta de Postes
     postes = listar_postes(filtro_status=filtro_status, termo_busca=busca_termo)
     
-    # 4. Poste Selecionado
     poste_focado = None
     if busca_termo:
         exatos = [p for p in postes if p["codigo"].lower() == busca_termo.strip().lower()]
@@ -78,19 +68,16 @@ def renderizar_tela_mapa():
         elif postes:
             poste_focado = postes[0]
 
-    # Centro do mapa
     if poste_focado:
         centro_mapa = [poste_focado["latitude"], poste_focado["longitude"]]
         zoom_inicial = 18
     else:
-        centro_mapa = [-6.1611, -35.6025] # Boa Saúde Centro
+        centro_mapa = [-6.1611, -35.6025]
         zoom_inicial = 15
 
-    # 5. Layout com Mapa Realtime e Detalhes
     col_mapa, col_detalhes = st.columns([3, 2])
 
     with col_mapa:
-        # Criação do Mapa Folium com suporte Realtime
         m = folium.Map(
             location=centro_mapa,
             zoom_start=zoom_inicial,
@@ -98,7 +85,6 @@ def renderizar_tela_mapa():
             control_scale=True
         )
 
-        # Adiciona camada de satélite de alta resolução (Esri)
         folium.TileLayer(
             tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
             attr="Esri World Imagery",
@@ -107,7 +93,6 @@ def renderizar_tela_mapa():
             control=True
         ).add_to(m)
 
-        # Camada Dark Tech (CartoDB Dark Matter)
         folium.TileLayer(
             tiles="CartoDB dark_matter",
             attr="CartoDB Dark",
@@ -116,7 +101,6 @@ def renderizar_tela_mapa():
             control=True
         ).add_to(m)
 
-        # Plugin Realtime GPS: Rastreia a posição ao vivo do operador no mapa
         plugins.LocateControl(
             auto_start=False,
             position="topleft",
@@ -124,13 +108,9 @@ def renderizar_tela_mapa():
             locate_options={"enableHighAccuracy": True, "maxZoom": 18}
         ).add_to(m)
 
-        # Plugin de Mini-Mapa de Navegação
         plugins.MiniMap(toggle_display=True, position="bottomleft").add_to(m)
-
-        # Controle de Camadas
         folium.LayerControl(position="topright").add_to(m)
 
-        # Agrupador de marcadores (MarkerCluster)
         cluster = plugins.MarkerCluster(name="Postes").add_to(m)
 
         for p in postes:
@@ -162,7 +142,6 @@ def renderizar_tela_mapa():
             )
             marcador.add_to(cluster)
 
-        # Renderiza o mapa Folium no Streamlit
         st_folium(m, height=530, use_container_width=True)
 
     with col_detalhes:
@@ -171,7 +150,6 @@ def renderizar_tela_mapa():
         if poste_focado:
             p = poste_focado
             
-            # Badge de Status
             cor_badge = "#10B981"
             txt_badge = "OPERACIONAL NORMAL"
             if p["status"] == "chamado_aberto":
@@ -197,7 +175,6 @@ def renderizar_tela_mapa():
                 unsafe_allow_html=True
             )
 
-            # Informações Técnicas
             col_info1, col_info2 = st.columns(2)
             with col_info1:
                 st.markdown(f"**Logradouro:**<br>{p['logradouro']}", unsafe_allow_html=True)
@@ -211,7 +188,6 @@ def renderizar_tela_mapa():
 
             st.markdown("---")
 
-            # Botões de Ação
             maps_url = f"https://www.google.com/maps/dir/?api=1&destination={p['latitude']},{p['longitude']}"
             
             c_btn1, c_btn2 = st.columns(2)

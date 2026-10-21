@@ -1,19 +1,18 @@
-# Ambientes Virtuais Python
 .venv/
 env/
 venv/
 ENV/
 
-# Python Cache
 __pycache__/
 *.py[cod]
 *$py.class
 
-# Arquivos de Sistema
 .DS_Store
 Thumbs.db
 
-# Variáveis de Ambiente e Segredos
 .env
 .streamlit/secrets.toml
 
+*.db
+*.sqlite
+*.sqlite3

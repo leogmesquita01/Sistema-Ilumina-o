@@ -1,15 +1,9 @@
-"""
-Serviço de Dados dos Postes (Supabase Cloud + Fallback SQLite)
-Responsável por consultas, buscas e cadastro de postes da rede de energia.
-"""
-
 from typing import List, Dict, Any, Optional
 import datetime
 from app.database.conexao import obter_conexao, obter_supabase
 
 
 def obter_resumo_indicadores() -> Dict[str, Any]:
-    """Retorna os principais indicadores para os cards no topo."""
     sb = obter_supabase()
     if sb:
         try:
@@ -35,8 +29,8 @@ def obter_resumo_indicadores() -> Dict[str, Any]:
                 "os_abertas": os_abertas,
                 "os_concluidas": os_concluidas,
             }
-        except Exception as e:
-            print(f"Aviso ao consultar indicadores no Supabase: {e}")
+        except Exception:
+            pass
 
     conn = obter_conexao()
     cursor = conn.cursor()
@@ -71,7 +65,6 @@ def obter_resumo_indicadores() -> Dict[str, Any]:
 
 
 def listar_postes(filtro_status: Optional[str] = None, termo_busca: Optional[str] = None) -> List[Dict[str, Any]]:
-    """Retorna a lista de postes filtrados."""
     sb = obter_supabase()
     if sb:
         try:
@@ -83,8 +76,8 @@ def listar_postes(filtro_status: Optional[str] = None, termo_busca: Optional[str
                 query = query.or_(f"codigo.ilike.%{t}%,logradouro.ilike.%{t}%,bairro.ilike.%{t}%")
             res = query.execute()
             return res.data or []
-        except Exception as e:
-            print(f"Aviso ao listar postes no Supabase: {e}")
+        except Exception:
+            pass
 
     conn = obter_conexao()
     cursor = conn.cursor()
@@ -110,7 +103,6 @@ def listar_postes(filtro_status: Optional[str] = None, termo_busca: Optional[str
 
 
 def obter_poste_por_codigo(codigo: str) -> Optional[Dict[str, Any]]:
-    """Busca um poste pelo código da plaqueta COSERN."""
     if not codigo:
         return None
 
@@ -131,8 +123,8 @@ def obter_poste_por_codigo(codigo: str) -> Optional[Dict[str, Any]]:
             )
             poste["historico_os"] = res_os.data or []
             return poste
-        except Exception as e:
-            print(f"Aviso ao buscar poste por código no Supabase: {e}")
+        except Exception:
+            pass
 
     conn = obter_conexao()
     cursor = conn.cursor()
@@ -158,7 +150,6 @@ def obter_poste_por_codigo(codigo: str) -> Optional[Dict[str, Any]]:
 
 
 def cadastrar_poste(dados: Dict[str, Any]) -> bool:
-    """Cadastra um novo poste no banco Supabase (e sincroniza localmente)."""
     novo_poste = {
         "codigo": dados["codigo"].strip(),
         "latitude": float(dados["latitude"]),
@@ -203,7 +194,6 @@ def cadastrar_poste(dados: Dict[str, Any]) -> bool:
 
 
 def atualizar_status_poste(codigo: str, status: str):
-    """Atualiza o status de operação do poste."""
     sb = obter_supabase()
     if sb:
         try:
@@ -212,8 +202,8 @@ def atualizar_status_poste(codigo: str, status: str):
                 "data_atualizacao": datetime.datetime.now(datetime.timezone.utc).isoformat()
             }).eq("codigo", codigo).execute()
             return
-        except Exception as e:
-            print(f"Aviso ao atualizar status no Supabase: {e}")
+        except Exception:
+            pass
 
     conn = obter_conexao()
     cursor = conn.cursor()

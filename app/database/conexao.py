@@ -1,7 +1,3 @@
-"""
-Gerenciador de Conexão com o Banco de Dados (Supabase Cloud + Fallback SQLite Local)
-"""
-
 import sqlite3
 import os
 from pathlib import Path
@@ -21,7 +17,6 @@ _supabase_client = None
 
 
 def obter_supabase():
-    """Retorna o cliente autenticado do Supabase (se configurado)."""
     global _supabase_client
     if _supabase_client is not None:
         return _supabase_client
@@ -29,7 +24,6 @@ def obter_supabase():
     url = os.getenv("SUPABASE_URL", DEFAULT_SUPABASE_URL)
     key = os.getenv("SUPABASE_KEY", DEFAULT_SUPABASE_KEY)
 
-    # Tenta ler de st.secrets caso esteja hospedado no Streamlit Cloud
     try:
         import streamlit as st
         if not url and "SUPABASE_URL" in st.secrets:
@@ -44,14 +38,12 @@ def obter_supabase():
             from supabase import create_client
             _supabase_client = create_client(url, key)
             return _supabase_client
-        except Exception as e:
-            print(f"Aviso: falha ao inicializar cliente Supabase ({e}). Usando SQLite local.")
+        except Exception:
             return None
     return None
 
 
 def obter_conexao() -> sqlite3.Connection:
-    """Retorna uma conexão com o banco SQLite local (fallback)."""
     DB_DIR.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -61,7 +53,6 @@ def obter_conexao() -> sqlite3.Connection:
 
 
 def inicializar_banco():
-    """Garante que as tabelas locais de fallback existam e valida conexão Supabase."""
     conn = obter_conexao()
     cursor = conn.cursor()
 
@@ -109,9 +100,3 @@ def inicializar_banco():
 
     conn.commit()
     conn.close()
-
-
-if __name__ == "__main__":
-    inicializar_banco()
-    sb = obter_supabase()
-    print("Banco inicializado com sucesso! Supabase ativo:", sb is not None)

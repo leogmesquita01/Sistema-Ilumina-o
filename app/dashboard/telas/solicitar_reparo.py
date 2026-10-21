@@ -1,8 +1,3 @@
-"""
-Tela: Solicitar Reparo & Kit de Equipamentos (O.S.)
-Prepara a ordem de serviço para a viatura com peças necessárias e despacho via WhatsApp.
-"""
-
 import streamlit as st
 from app.servicos.dados_postes import listar_postes, obter_poste_por_codigo
 from app.servicos.ordens_service import criar_ordem_servico, gerar_mensagem_whatsapp
@@ -11,7 +6,6 @@ def renderizar_tela_solicitar_reparo():
     st.markdown('<h1 class="montserrat-title">🛠️ Solicitar Reparo & Equipamentos</h1>', unsafe_allow_html=True)
     st.caption("Gere ordens de serviço com a relação de peças necessárias para a viatura ir a campo.")
 
-    # 1. Seleção do Poste
     todos_postes = listar_postes()
     opcoes_postes = {f"{p['codigo']} — {p['logradouro']} ({p['bairro']})": p['codigo'] for p in todos_postes}
     
@@ -40,7 +34,6 @@ def renderizar_tela_solicitar_reparo():
         st.error("Poste não encontrado.")
         return
 
-    # 2. Resumo Visual do Poste
     st.markdown(
         f"""
         <div style="background: rgba(2, 132, 199, 0.08); border: 1px solid rgba(2, 132, 199, 0.25); border-radius: 12px; padding: 14px; margin: 12px 0;">
@@ -61,7 +54,6 @@ def renderizar_tela_solicitar_reparo():
         unsafe_allow_html=True
     )
 
-    # 3. Formulário da O.S.
     with st.form("form_ordem_servico"):
         st.subheader("1. Diagnóstico do Problema")
         col_def, col_prio = st.columns([2, 1])
@@ -90,7 +82,6 @@ def renderizar_tela_solicitar_reparo():
         st.subheader("2. Kit de Peças & Equipamentos para a Viatura")
         st.caption("Selecione os materiais que a equipe deve carregar no veículo:")
 
-        # Sugestão inteligente de lâmpada compatível
         label_lampada = f"Lâmpada LED {poste['potencia']}W" if poste['tipo_luminaria'] == "LED" else f"Lâmpada LED {poste['potencia']}W (Substituição de {poste['tipo_luminaria']})"
 
         c_mat1, c_mat2 = st.columns(2)
@@ -121,7 +112,6 @@ def renderizar_tela_solicitar_reparo():
         submeter = st.form_submit_button("🚀 Gerar Ordem de Serviço", type="primary", use_container_width=True)
 
     if submeter:
-        # Monta lista de materiais
         materiais = []
         if usar_lampada: materiais.append({"item": f"Lâmpada LED {poste['potencia']}W", "quantidade": qtd_lampada})
         if usar_rele: materiais.append({"item": "Relé Fotoelétrico 100-240V", "quantidade": qtd_rele})
@@ -133,7 +123,7 @@ def renderizar_tela_solicitar_reparo():
         protocolo = criar_ordem_servico(
             codigo_poste=poste["codigo"],
             defeito=defeito,
-            prioridade=prioridade.split()[0], # Normal, Alta, Urgente
+            prioridade=prioridade.split()[0],
             materiais=materiais,
             solicitante=solicitante,
             observacoes=observacoes
@@ -141,7 +131,6 @@ def renderizar_tela_solicitar_reparo():
 
         st.success(f"✅ Ordem de Serviço **{protocolo}** gerada com sucesso para o poste **{poste['codigo']}**!", icon="🎉")
 
-        # Botão de Envio para WhatsApp
         zap_url = gerar_mensagem_whatsapp(
             protocolo=protocolo,
             codigo_poste=poste["codigo"],

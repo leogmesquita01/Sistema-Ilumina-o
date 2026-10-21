@@ -1,7 +1,3 @@
-"""
-Tela: Cadastrar Poste Manualmente (Modo Campo)
-"""
-
 import streamlit as st
 from app.servicos.dados_postes import cadastrar_poste
 
@@ -24,7 +20,6 @@ def renderizar_tela_cadastrar():
             potencia = st.number_input("Potência (Watts):", value=100, step=10)
 
         observacoes = st.text_area("Observações Técnicas:", placeholder="Estrutura, estado de conservação, etc.")
-
         salvar = st.form_submit_button("💾 Salvar Poste no Banco", type="primary", use_container_width=True)
 
     if salvar:

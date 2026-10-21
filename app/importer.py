@@ -1,15 +1,8 @@
-"""
-Módulo de Importação de Arquivos da COSERN / ANEEL
-Capaz de ler planilhas Excel (.xlsx, .xls) e arquivos CSV, identificar colunas automaticamente
-mesmo com nomes variados e salvar os postes no banco Supabase (ou SQLite local).
-"""
-
 import pandas as pd
 import io
 from typing import Dict, Any, List
-from app.database.conexao import obter_conexao as get_connection, obter_supabase
+from app.database.conexao import obter_conexao, obter_supabase
 
-# Sinônimos comuns de cabeçalhos nas planilhas de concessionárias
 COLUMN_SYNONYMS = {
     "codigo": ["codigo", "cod", "plaqueta", "barramento", "id_poste", "poste", "etiqueta", "ponto", "ponnot", "num_poste"],
     "latitude": ["latitude", "lat", "lat_y", "coord_y", "y"],
@@ -25,7 +18,6 @@ COLUMN_SYNONYMS = {
 
 
 def clean_coordinate(val: Any) -> float:
-    """Limpa e converte strings de coordenadas, tratando vírgulas brasileiras (-6,160 -> -6.160)."""
     if pd.isna(val):
         raise ValueError("Coordenada vazia")
     if isinstance(val, (int, float)):
@@ -35,7 +27,6 @@ def clean_coordinate(val: Any) -> float:
 
 
 def identify_columns(df_columns: List[str]) -> Dict[str, str]:
-    """Identifica as melhores colunas do dataframe correspondentes ao nosso modelo."""
     mapping = {}
     normalized_cols = {str(col).strip().lower(): col for col in df_columns}
 
@@ -54,12 +45,8 @@ def identify_columns(df_columns: List[str]) -> Dict[str, str]:
 
 
 def import_poles_file(file_bytes: bytes, filename: str) -> Dict[str, Any]:
-    """
-    Lê o arquivo de planilha (Excel ou CSV) e insere ou atualiza os postes no banco de dados.
-    """
     filename_lower = filename.lower()
 
-    # 1. Carrega o arquivo com Pandas
     if filename_lower.endswith(".csv"):
         try:
             df = pd.read_csv(io.BytesIO(file_bytes), sep=None, engine="python", encoding="utf-8")
@@ -73,7 +60,6 @@ def import_poles_file(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     if df.empty:
         raise ValueError("O arquivo enviado está vazio.")
 
-    # 2. Identifica colunas
     col_map = identify_columns(list(df.columns))
 
     if "codigo" not in col_map or "latitude" not in col_map or "longitude" not in col_map:
@@ -138,7 +124,6 @@ def import_poles_file(file_bytes: bytes, filename: str) -> Dict[str, Any]:
             if len(detalhes_erros) < 5:
                 detalhes_erros.append(f"Linha {idx + 2}: {str(e)}")
 
-    # 3. Salva no Supabase (em lotes) se configurado
     sb = obter_supabase()
     if sb and lote_postes:
         tamanho_lote = 500
@@ -154,8 +139,7 @@ def import_poles_file(file_bytes: bytes, filename: str) -> Dict[str, Any]:
             "colunas_identificadas": col_map,
         }
 
-    # 4. Fallback SQLite local
-    conn = get_connection()
+    conn = obter_conexao()
     cursor = conn.cursor()
 
     for p in lote_postes:

@@ -1,8 +1,3 @@
-"""
-Tela: Controle e Gestão de Ordens de Serviço
-Acompanhamento dos chamados, histórico e baixa de manutenções realizadas.
-"""
-
 import streamlit as st
 from app.servicos.ordens_service import listar_ordens, concluir_ordem_servico
 
@@ -10,7 +5,6 @@ def renderizar_tela_ordens_servico():
     st.markdown('<h1 class="montserrat-title">📋 Ordens de Serviço & Manutenções</h1>', unsafe_allow_html=True)
     st.caption("Acompanhe o status dos chamados de iluminação pública e dê baixa nos serviços concluídos.")
 
-    # Filtro de Status
     c_filtro, c_busca = st.columns([1, 2])
     with c_filtro:
         filtro_status = st.selectbox("Status:", ["Todos", "aberta", "concluida"])
