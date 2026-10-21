@@ -19,7 +19,7 @@ from app.dashboard.telas.cadastrar_poste import renderizar_tela_cadastrar
 
 st.set_page_config(
     page_title="Ilumina Boa Saúde — COSERN",
-    page_icon="💡",
+    page_icon=":material/tungsten:",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -28,28 +28,42 @@ inicializar_banco()
 seed_database()
 aplicar_estilos()
 
+try:
+    stats = obter_resumo_indicadores()
+    total_postes = stats["total_postes"]
+    total_led = stats["total_led"]
+    taxa_led = stats["taxa_led"]
+    total_chamados = stats["total_chamados"]
+    os_abertas = stats["os_abertas"]
+except Exception:
+    total_postes = 12
+    total_led = 7
+    taxa_led = 58.3
+    total_chamados = 4
+    os_abertas = 2
+
 with st.sidebar:
-    logo_html = (
-        '<div style="display: flex; align-items: center; gap: 11px; margin-bottom: 1.4rem; padding: 4px 2px 2px 2px;">'
-        '<div style="width: 36px; height: 36px; border-radius: 11px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(16, 185, 129, 0.04)); border: 1.5px solid #10B981; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 16px rgba(16, 185, 129, 0.25);">'
-        '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'
-        '<path d="M12 2v20M5 5h14M7 9h10M9 13h6"/>'
+    brand_html = (
+        '<div style="display: flex; align-items: center; gap: 10px; padding: 2px 4px 18px 4px; border-bottom: 1px solid #222224; margin-bottom: 16px;">'
+        '<div style="width: 30px; height: 30px; border-radius: 6px; background: #212023; border: 1px solid #3a3a3e; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">'
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4a8ad6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+        '<path d="M12 2v20M5 6h14M7 10h10M9 14h6"/>'
         '</svg>'
         '</div>'
-        '<div>'
-        '<div style="font-family: \'Montserrat\', sans-serif; font-size: 1.15rem; font-weight: 900; letter-spacing: -0.5px; color: #FFFFFF; line-height: 1.1;">'
-        'Ilumina <span style="color: #10B981;">Boa Saúde</span>'
+        '<div style="min-width: 0;">'
+        '<div style="font-size: 14px; font-weight: 600; color: #ffffff; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">'
+        'Ilumina Boa Saúde'
         '</div>'
-        '<div style="font-size: 10px; color: #8E8E93; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">'
-        'Sec. de Infraestrutura'
+        '<div style="font-size: 11.5px; color: #8a8c92; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">'
+        'Boa Saúde / RN · COSERN'
         '</div>'
         '</div>'
         '</div>'
     )
-    st.markdown(logo_html, unsafe_allow_html=True)
+    st.markdown(brand_html, unsafe_allow_html=True)
 
     menu_opcoes = [
-        ":material/map: Mapa e Postes",
+        ":material/map: Mapa e postes",
         ":material/handyman: Solicitar reparo",
         ":material/assignment: Ordens de serviço",
         ":material/upload_file: Importar base COSERN",
@@ -57,10 +71,19 @@ with st.sidebar:
     ]
 
     pagina_selecionada = st.session_state.get("pagina_atual", menu_opcoes[0])
+    # Compatibilidade caso alguma tela tenha gravado com capitalização antiga
+    mapa_antigo = {
+        ":material/map: Mapa e Postes": menu_opcoes[0],
+        ":material/handyman: Solicitar reparo": menu_opcoes[1],
+        ":material/assignment: Ordens de serviço": menu_opcoes[2],
+        ":material/upload_file: Importar base COSERN": menu_opcoes[3],
+        ":material/add_location_alt: Cadastrar poste": menu_opcoes[4],
+    }
+    pagina_selecionada = mapa_antigo.get(pagina_selecionada, pagina_selecionada)
     idx_padrao = menu_opcoes.index(pagina_selecionada) if pagina_selecionada in menu_opcoes else 0
 
     menu = st.radio(
-        "",
+        "Navegação",
         menu_opcoes,
         index=idx_padrao,
         label_visibility="collapsed",
@@ -68,61 +91,46 @@ with st.sidebar:
     st.session_state["pagina_atual"] = menu
 
     st.markdown(
-        """<div style="height: 1px; background: rgba(255, 255, 255, 0.06); margin: 1.4rem 0 1.2rem 0;"></div>""",
+        '<div style="height: 1px; background: #222224; margin: 18px 0 16px 0;"></div>',
         unsafe_allow_html=True,
     )
 
-    try:
-        stats = obter_resumo_indicadores()
-        total_postes = stats["total_postes"]
-        taxa_led = int(stats["taxa_led"])
-    except Exception:
-        total_postes = 12
-        taxa_led = 58
-
-    meta_postes = 2000
-    pct_rede = min(100, int((total_postes / meta_postes) * 100)) if total_postes > 0 else 5
-
-    card_html = (
-        '<div style="background: #111E1A; border: 1px solid rgba(16, 185, 129, 0.18); border-radius: 16px; padding: 14px 15px; margin-bottom: 1.5rem;">'
-        '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">'
-        '<span style="font-family: \'Manrope\', sans-serif; font-size: 0.8rem; color: #8E8E93; font-weight: 500;">Rede Mapeada</span>'
-        f'<span style="font-family: \'JetBrains Mono\', monospace; font-size: 0.78rem; color: #F4F4F5; font-weight: 600;">{total_postes:,} / {meta_postes:,}</span>'
+    cor_chamados = "#e5566f" if total_chamados > 0 else "#8a8c92"
+    well_html = (
+        '<div style="background: #171719; border: 1px solid #222224; border-radius: 6px; padding: 12px 14px; margin-bottom: 16px;">'
+        '<div style="font-size: 12px; color: #8a8c92; margin-bottom: 10px; font-weight: 500;">Resumo da malha</div>'
+        '<div style="display: flex; justify-content: space-between; align-items: baseline; padding: 5px 0; border-bottom: 1px solid #1b1a1f; font-size: 12.5px;">'
+        '<span style="color: #8a8c92;">Postes mapeados</span>'
+        f'<span style="font-family: \'JetBrains Mono\', monospace; font-variant-numeric: tabular-nums; color: #ffffff; font-weight: 500;">{total_postes}</span>'
         '</div>'
-        '<div style="width: 100%; height: 4px; background: #1A2D27; border-radius: 2px; margin-bottom: 13px; overflow: hidden;">'
-        f'<div style="width: {pct_rede}%; height: 100%; background: #10B981; border-radius: 2px; box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);"></div>'
+        '<div style="display: flex; justify-content: space-between; align-items: baseline; padding: 5px 0; border-bottom: 1px solid #1b1a1f; font-size: 12.5px;">'
+        '<span style="color: #8a8c92;">Parque em LED</span>'
+        f'<span style="font-family: \'JetBrains Mono\', monospace; font-variant-numeric: tabular-nums; color: #ffffff; font-weight: 500;">{taxa_led}% <span style="color: #8a8c92; font-size: 11px;">({total_led})</span></span>'
         '</div>'
-        '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">'
-        '<span style="font-family: \'Manrope\', sans-serif; font-size: 0.8rem; color: #8E8E93; font-weight: 500;">Parque em LED</span>'
-        f'<span style="font-family: \'JetBrains Mono\', monospace; font-size: 0.78rem; color: #F4F4F5; font-weight: 600;">{taxa_led}%</span>'
+        '<div style="display: flex; justify-content: space-between; align-items: baseline; padding: 5px 0; border-bottom: 1px solid #1b1a1f; font-size: 12.5px;">'
+        '<span style="color: #8a8c92;">Chamados ativos</span>'
+        f'<span style="font-family: \'JetBrains Mono\', monospace; font-variant-numeric: tabular-nums; color: {cor_chamados}; font-weight: 500;">{total_chamados}</span>'
         '</div>'
-        '<div style="width: 100%; height: 4px; background: #1A2D27; border-radius: 2px; margin-bottom: 13px; overflow: hidden;">'
-        f'<div style="width: {taxa_led}%; height: 100%; background: #10B981; border-radius: 2px; box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);"></div>'
-        '</div>'
-        '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">'
-        '<span style="font-family: \'Manrope\', sans-serif; font-size: 0.8rem; color: #8E8E93; font-weight: 500;">Rede COSERN</span>'
-        '<span style="font-family: \'JetBrains Mono\', monospace; font-size: 0.78rem; color: #10B981; font-weight: 600;">Ativo • Online</span>'
-        '</div>'
-        '<div style="width: 100%; height: 4px; background: #1A2D27; border-radius: 2px; overflow: hidden;">'
-        '<div style="width: 100%; height: 100%; background: #10B981; border-radius: 2px; box-shadow: 0 0 6px rgba(16, 185, 129, 0.4);"></div>'
+        '<div style="display: flex; justify-content: space-between; align-items: baseline; padding: 5px 0 0 0; font-size: 12.5px;">'
+        '<span style="color: #8a8c92;">O.S. abertas</span>'
+        f'<span style="font-family: \'JetBrains Mono\', monospace; font-variant-numeric: tabular-nums; color: #ffffff; font-weight: 500;">{os_abertas}</span>'
         '</div>'
         '</div>'
     )
-    st.markdown(card_html, unsafe_allow_html=True)
+    st.markdown(well_html, unsafe_allow_html=True)
 
     perfil_html = (
-        '<div style="margin-top: auto; padding-top: 1.2rem; border-top: 1px solid rgba(255, 255, 255, 0.06);">'
-        '<div style="font-family: \'Manrope\', sans-serif; font-size: 1.05rem; font-weight: 800; color: #FFFFFF; line-height: 1.2; letter-spacing: -0.3px;">'
-        'Leonardo Mesquita'
+        '<div style="margin-top: auto; padding-top: 14px; border-top: 1px solid #222224; display: flex; justify-content: space-between; align-items: center;">'
+        '<div>'
+        '<div style="font-size: 13px; font-weight: 500; color: #ffffff; line-height: 1.2;">Leonardo Mesquita</div>'
+        '<div style="font-size: 11.5px; color: #8a8c92; margin-top: 2px;">Secretaria de Infraestrutura</div>'
         '</div>'
-        '<div style="font-family: \'JetBrains Mono\', monospace; font-size: 0.65rem; font-weight: 600; color: #71717A; letter-spacing: 2px; text-transform: uppercase; margin-top: 4px;">'
-        'CRIADOR'
-        '</div>'
+        '<span class="status-pill positive">Supabase</span>'
         '</div>'
     )
     st.markdown(perfil_html, unsafe_allow_html=True)
 
-if menu == ":material/map: Mapa e Postes":
+if menu == ":material/map: Mapa e postes":
     renderizar_tela_mapa()
 elif menu == ":material/handyman: Solicitar reparo":
     renderizar_tela_solicitar_reparo()
