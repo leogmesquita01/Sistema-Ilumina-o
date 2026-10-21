@@ -18,7 +18,7 @@ from app.dashboard.telas.cadastrar_poste import renderizar_tela_cadastrar
 
 st.set_page_config(
     page_title="Ilumina Boa Saúde",
-    page_icon=":material/tungsten:",
+    page_icon="💡",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -30,35 +30,37 @@ try:
     stats = obter_resumo_indicadores()
     total_postes = stats["total_postes"]
     total_led = stats["total_led"]
-    taxa_led = stats["taxa_led"]
+    taxa_led = int(round(stats["taxa_led"]))
     total_chamados = stats["total_chamados"]
     os_abertas = stats["os_abertas"]
+    os_concluidas = stats["os_concluidas"]
 except Exception:
     total_postes = 0
     total_led = 0
-    taxa_led = 0.0
+    taxa_led = 0
     total_chamados = 0
     os_abertas = 0
+    os_concluidas = 0
 
 with st.sidebar:
-    brand_html = (
-        '<div style="display: flex; align-items: center; gap: 10px; padding: 2px 4px 18px 4px; border-bottom: 1px solid #222224; margin-bottom: 16px;">'
-        '<div style="width: 30px; height: 30px; border-radius: 6px; background: #212023; border: 1px solid #3a3a3e; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">'
-        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4a8ad6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
-        '<path d="M12 2v20M5 6h14M7 10h10M9 14h6"/>'
+    logo_html = (
+        '<div style="display: flex; align-items: center; gap: 12px; margin-bottom: 1.5rem; padding: 4px 2px;">'
+        '<div style="width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.28), rgba(14, 165, 233, 0.08)); border: 1.5px solid #10B981; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(16, 185, 129, 0.28); flex-shrink: 0;">'
+        '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'
+        '<path d="M12 2v20M5 5h14M7 9h10M9 13h6"/>'
         '</svg>'
         '</div>'
-        '<div style="min-width: 0;">'
-        '<div style="font-size: 14px; font-weight: 600; color: #ffffff; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">'
-        'Ilumina Boa Saúde'
+        '<div>'
+        '<div style="font-family: \'Outfit\', sans-serif; font-size: 1.18rem; font-weight: 800; letter-spacing: -0.4px; color: #FFFFFF; line-height: 1.1;">'
+        'Ilumina <span style="color: #10B981;">Boa Saúde</span>'
         '</div>'
-        '<div style="font-size: 11.5px; color: #8a8c92; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">'
-        'Boa Saúde / RN · Infraestrutura'
+        '<div style="font-size: 10.5px; color: #94A3B8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; margin-top: 3px;">'
+        'Sec. de Infraestrutura'
         '</div>'
         '</div>'
         '</div>'
     )
-    st.markdown(brand_html, unsafe_allow_html=True)
+    st.markdown(logo_html, unsafe_allow_html=True)
 
     menu_opcoes = [
         ":material/map: Mapa e postes",
@@ -85,41 +87,48 @@ with st.sidebar:
     st.session_state["pagina_atual"] = menu
 
     st.markdown(
-        '<div style="height: 1px; background: #222224; margin: 18px 0 16px 0;"></div>',
+        '<div style="height: 1px; background: rgba(255, 255, 255, 0.07); margin: 1.3rem 0 1.1rem 0;"></div>',
         unsafe_allow_html=True,
     )
 
-    cor_chamados = "#e5566f" if total_chamados > 0 else "#8a8c92"
-    well_html = (
-        '<div style="background: #171719; border: 1px solid #222224; border-radius: 6px; padding: 12px 14px; margin-bottom: 16px;">'
-        '<div style="font-size: 12px; color: #8a8c92; margin-bottom: 10px; font-weight: 500;">Base municipal</div>'
-        '<div style="display: flex; justify-content: space-between; align-items: baseline; padding: 5px 0; border-bottom: 1px solid #1b1a1f; font-size: 12.5px;">'
-        '<span style="color: #8a8c92;">Postes cadastrados</span>'
-        f'<span style="font-family: \'JetBrains Mono\', monospace; font-variant-numeric: tabular-nums; color: #ffffff; font-weight: 500;">{total_postes}</span>'
+    total_os = os_abertas + os_concluidas
+    taxa_resolucao = int(round((os_concluidas / total_os) * 100)) if total_os > 0 else 100
+
+    card_html = (
+        '<div style="background: rgba(8, 13, 20, 0.65); border: 1px solid rgba(16, 185, 129, 0.22); border-radius: 16px; padding: 15px 16px; margin-bottom: 1.2rem; box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);">'
+        '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 11px;">'
+        '<span style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #34D399;">Telemetria da Base</span>'
+        '<span style="display: inline-flex; align-items: center; gap: 5px; font-size: 0.7rem; color: #94A3B8;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #10B981; box-shadow: 0 0 8px #10B981;"></span>Supabase</span>'
         '</div>'
-        '<div style="display: flex; justify-content: space-between; align-items: baseline; padding: 5px 0; border-bottom: 1px solid #1b1a1f; font-size: 12.5px;">'
-        '<span style="color: #8a8c92;">Parque em LED</span>'
-        f'<span style="font-family: \'JetBrains Mono\', monospace; font-variant-numeric: tabular-nums; color: #ffffff; font-weight: 500;">{taxa_led}% <span style="color: #8a8c92; font-size: 11px;">({total_led})</span></span>'
+        '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">'
+        '<span style="font-size: 0.8rem; color: #94A3B8; font-weight: 500;">Postes Cadastrados</span>'
+        f'<span class="mono" style="font-size: 0.82rem; color: #F8FAFC; font-weight: 700;">{total_postes}</span>'
         '</div>'
-        '<div style="display: flex; justify-content: space-between; align-items: baseline; padding: 5px 0; border-bottom: 1px solid #1b1a1f; font-size: 12.5px;">'
-        '<span style="color: #8a8c92;">Chamados ativos</span>'
-        f'<span style="font-family: \'JetBrains Mono\', monospace; font-variant-numeric: tabular-nums; color: {cor_chamados}; font-weight: 500;">{total_chamados}</span>'
+        '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; margin-top: 10px;">'
+        '<span style="font-size: 0.8rem; color: #94A3B8; font-weight: 500;">Eficiência LED</span>'
+        f'<span class="mono" style="font-size: 0.8rem; color: #34D399; font-weight: 700;">{taxa_led}%</span>'
         '</div>'
-        '<div style="display: flex; justify-content: space-between; align-items: baseline; padding: 5px 0 0 0; font-size: 12.5px;">'
-        '<span style="color: #8a8c92;">O.S. abertas</span>'
-        f'<span style="font-family: \'JetBrains Mono\', monospace; font-variant-numeric: tabular-nums; color: #ffffff; font-weight: 500;">{os_abertas}</span>'
+        '<div style="width: 100%; height: 5px; background: rgba(255,255,255,0.07); border-radius: 999px; margin-bottom: 12px; overflow: hidden;">'
+        f'<div style="width: {taxa_led}%; height: 100%; background: linear-gradient(90deg, #10B981, #0EA5E9); border-radius: 999px;"></div>'
+        '</div>'
+        '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">'
+        '<span style="font-size: 0.8rem; color: #94A3B8; font-weight: 500;">Taxa de Resolução O.S.</span>'
+        f'<span class="mono" style="font-size: 0.8rem; color: #38BDF8; font-weight: 700;">{taxa_resolucao}%</span>'
+        '</div>'
+        '<div style="width: 100%; height: 5px; background: rgba(255,255,255,0.07); border-radius: 999px; overflow: hidden;">'
+        f'<div style="width: {taxa_resolucao}%; height: 100%; background: linear-gradient(90deg, #0EA5E9, #38BDF8); border-radius: 999px;"></div>'
         '</div>'
         '</div>'
     )
-    st.markdown(well_html, unsafe_allow_html=True)
+    st.markdown(card_html, unsafe_allow_html=True)
 
     perfil_html = (
-        '<div style="margin-top: auto; padding-top: 14px; border-top: 1px solid #222224; display: flex; justify-content: space-between; align-items: center;">'
+        '<div style="margin-top: auto; padding-top: 1.1rem; border-top: 1px solid rgba(255, 255, 255, 0.07); display: flex; align-items: center; gap: 10px;">'
+        '<div style="width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(135deg, #17263C, #0F1826); border: 1px solid rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.78rem; color: #34D399;">LM</div>'
         '<div>'
-        '<div style="font-size: 13px; font-weight: 500; color: #ffffff; line-height: 1.2;">Leonardo Mesquita</div>'
-        '<div style="font-size: 11.5px; color: #8a8c92; margin-top: 2px;">Secretaria de Infraestrutura</div>'
+        '<div style="font-size: 0.92rem; font-weight: 700; color: #FFFFFF; line-height: 1.2;">Leonardo Mesquita</div>'
+        '<div class="mono" style="font-size: 0.65rem; font-weight: 600; color: #64748B; letter-spacing: 1.5px; text-transform: uppercase; margin-top: 2px;">CRIADOR · GESTOR</div>'
         '</div>'
-        '<span class="status-pill positive">Supabase</span>'
         '</div>'
     )
     st.markdown(perfil_html, unsafe_allow_html=True)

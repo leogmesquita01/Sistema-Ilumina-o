@@ -4,60 +4,83 @@ from app.servicos.ordens_service import listar_ordens, concluir_ordem_servico, g
 
 def renderizar_tela_ordens_servico():
     todas_ordens = listar_ordens(filtro_status="Todos")
+    total_os = len(todas_ordens)
     abertas = [o for o in todas_ordens if o.get("status") == "aberta"]
     urgentes = [o for o in abertas if o.get("prioridade") == "Urgente"]
     concluidas = [o for o in todas_ordens if o.get("status") == "concluida"]
 
-    finding = (
-        f"{len(abertas)} ordens aguardam execução ({len(urgentes)} de prioridade urgente)."
-        if abertas
-        else "Nenhuma ordem de serviço pendente na fila."
-    )
+    taxa_conclusao = round((len(concluidas) / total_os) * 100, 1) if total_os > 0 else 100.0
+    pct_abertas = round((len(abertas) / total_os) * 100, 1) if total_os > 0 else 0.0
+    pct_urgentes = round((len(urgentes) / len(abertas)) * 100, 1) if abertas else 0.0
 
     st.markdown(
         f"""
-        <div class="page-header">
+        <div class="command-hero">
             <div>
-                <h1 class="page-title">Ordens de serviço e fila de campo</h1>
-                <p class="page-subtitle">{finding}</p>
+                <div class="hero-badge">
+                    <span class="hero-dot"></span>
+                    Controle de Manutenção · Equipes de Rua
+                </div>
+                <h1 class="hero-title">Ordens de Serviço e Fila de Campo</h1>
+                <p class="hero-subtitle">Acompanhamento de chamados abertos, kits de peças embarcados e baixa de serviços concluídos.</p>
             </div>
-            <div class="page-meta">
-                <span>Total histórico: <span class="mono" style="color: #ffffff;">{len(todas_ordens)}</span></span>
-                <span>Secretaria de Infraestrutura</span>
+            <div class="hero-right">
+                <div style="font-size: 0.72rem; color: #64748B; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700;">Total Histórico</div>
+                <div class="mono" style="font-size: 1.05rem; font-weight: 700; color: #10B981; margin-top: 2px;">{total_os} Ordens</div>
+                <div style="font-size: 0.75rem; color: #94A3B8; margin-top: 2px;">Boa Saúde · RN</div>
             </div>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
 
-    # KPI Strip de 3 colunas para a fila de O.S.
-    cor_urgente = "color: #e5566f;" if len(urgentes) > 0 else ""
-    st.markdown(
-        f"""
-        <div class="kpi-strip" style="grid-template-columns: repeat(3, 1fr);">
-            <div class="kpi-cell">
-                <div class="kpi-label">Ordens em aberto</div>
-                <div class="kpi-value-row">
-                    <span class="kpi-value lead">{len(abertas)}</span>
-                    <span class="kpi-unit">na fila</span>
+        <div class="bento-kpi-grid" style="grid-template-columns: repeat(3, 1fr);">
+            <div class="bento-kpi-card">
+                <div class="bento-kpi-top">
+                    <span class="bento-kpi-label">Ordens em Aberto</span>
+                    <div class="bento-kpi-icon amber">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    </div>
                 </div>
-                <div class="kpi-sub">Aguardando baixa da equipe</div>
+                <div class="bento-kpi-value">{len(abertas)}</div>
+                <div class="bento-kpi-bar">
+                    <div class="bento-kpi-bar-fill" style="width: {min(100, max(5, pct_abertas))}%; background: #F59E0B;"></div>
+                </div>
+                <div class="bento-kpi-sub">
+                    <span>Aguardando execução</span>
+                    <span class="mono" style="color: #FBBF24;">Fila ativa</span>
+                </div>
             </div>
-            <div class="kpi-cell">
-                <div class="kpi-label">Prioridade urgente</div>
-                <div class="kpi-value-row">
-                    <span class="kpi-value" style="{cor_urgente}">{len(urgentes)}</span>
-                    <span class="kpi-unit">chamados</span>
+
+            <div class="bento-kpi-card">
+                <div class="bento-kpi-top">
+                    <span class="bento-kpi-label">Prioridade Urgente</span>
+                    <div class="bento-kpi-icon rose">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    </div>
                 </div>
-                <div class="kpi-sub">Unidades de saúde, centro ou risco</div>
+                <div class="bento-kpi-value" style="{'color: #FB7185;' if urgentes else ''}">{len(urgentes)}</div>
+                <div class="bento-kpi-bar">
+                    <div class="bento-kpi-bar-fill" style="width: {min(100, max(4, pct_urgentes))}%; background: #F43F5E;"></div>
+                </div>
+                <div class="bento-kpi-sub">
+                    <span>Saúde, escolas ou risco</span>
+                    <span class="mono" style="color: #FB7185;">Crítico</span>
+                </div>
             </div>
-            <div class="kpi-cell">
-                <div class="kpi-label">Reparos concluídos</div>
-                <div class="kpi-value-row">
-                    <span class="kpi-value">{len(concluidas)}</span>
-                    <span class="kpi-unit">finalizados</span>
+
+            <div class="bento-kpi-card">
+                <div class="bento-kpi-top">
+                    <span class="bento-kpi-label">Reparos Concluídos</span>
+                    <div class="bento-kpi-icon emerald">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    </div>
                 </div>
-                <div class="kpi-sub">Postes normalizados na rede</div>
+                <div class="bento-kpi-value">{len(concluidas)}</div>
+                <div class="bento-kpi-bar">
+                    <div class="bento-kpi-bar-fill" style="width: {taxa_conclusao}%; background: linear-gradient(90deg, #10B981, #34D399);"></div>
+                </div>
+                <div class="bento-kpi-sub">
+                    <span>Taxa de resolução</span>
+                    <span class="mono" style="color: #34D399;">{taxa_conclusao}%</span>
+                </div>
             </div>
         </div>
         """,
@@ -76,8 +99,8 @@ def renderizar_tela_ordens_servico():
 
     with c_busca:
         termo = st.text_input(
-            "Filtrar por protocolo, plaqueta ou endereço",
-            placeholder="Ex: OS-2026-0001, CSR-1002, Rua Severino Ramos...",
+            "Filtrar por protocolo, código do poste ou endereço",
+            placeholder="Ex: OS-2026-0001, P-01, Rua Manoel Cirilo...",
         )
 
     ordens = listar_ordens(filtro_status=filtro_status)
@@ -94,7 +117,16 @@ def renderizar_tela_ordens_servico():
 
     if not ordens:
         st.markdown(
-            '<div class="panel-card" style="border-style: dashed; color: #8a8c92;">Nenhuma ordem de serviço encontrada para os critérios selecionados.</div>',
+            """
+            <div class="panel-card" style="text-align: center; padding: 36px 24px; border-style: dashed;">
+                <div style="font-family: 'Outfit', sans-serif; font-size: 1.08rem; font-weight: 700; color: #FFFFFF; margin-bottom: 4px;">
+                    Nenhuma Ordem de Serviço encontrada
+                </div>
+                <div style="font-size: 0.85rem; color: #94A3B8;">
+                    Não há registros para o filtro selecionado. Você pode abrir uma nova solicitação na aba Solicitar Reparo.
+                </div>
+            </div>
+            """,
             unsafe_allow_html=True,
         )
         return
@@ -111,33 +143,38 @@ def renderizar_tela_ordens_servico():
             pill_status = f'<span class="status-pill warning">Aberta · {prioridade_item}</span>'
 
         materiais_lista = os_item.get("materiais_lista", [])
-        materiais_str = (
-            " · ".join([f"{m.get('quantidade', 1)}x {m.get('item', '')}" for m in materiais_lista])
-            if materiais_lista
-            else "Vistoria no local"
-        )
+        if materiais_lista:
+            chips_html = "".join(
+                [
+                    f'<span class="mat-chip">{m.get("quantidade", 1)}x {m.get("item", "")}</span>'
+                    for m in materiais_lista
+                ]
+            )
+        else:
+            chips_html = '<span class="mat-chip">Vistoria técnica no local</span>'
+
         data_abertura = str(os_item.get("data_abertura", ""))[:10] or "—"
 
         st.markdown(
             f"""
-            <div class="panel-card" style="margin-bottom: 10px; padding: 16px 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap;">
+            <div class="panel-card" style="margin-bottom: 12px; padding: 18px 22px;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; flex-wrap: wrap;">
                     <div>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <span class="mono" style="font-size: 15px; font-weight: 600; color: #ffffff;">{os_item['protocolo']}</span>
-                            <span class="mono" style="font-size: 13px; color: #4a8ad6;">{os_item['codigo_poste']}</span>
-                            <span style="font-size: 13px; color: #8a8c92;">{os_item.get('logradouro', '')} · {os_item.get('bairro', '')}</span>
+                        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                            <span class="mono" style="font-size: 1rem; font-weight: 800; color: #FFFFFF;">{os_item['protocolo']}</span>
+                            <span class="mono" style="font-size: 0.85rem; font-weight: 700; color: #34D399; background: rgba(16, 185, 129, 0.12); padding: 2px 9px; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.3);">Poste {os_item['codigo_poste']}</span>
+                            <span style="font-size: 0.85rem; color: #94A3B8;">{os_item.get('logradouro', '')} · {os_item.get('bairro', '')}</span>
                         </div>
-                        <div style="font-size: 13.5px; color: #ffffff; margin-top: 8px; font-weight: 500;">
+                        <div style="font-size: 0.95rem; color: #F8FAFC; margin-top: 10px; font-weight: 600;">
                             {os_item['defeito']}
                         </div>
-                        <div style="font-size: 12.5px; color: #8a8c92; margin-top: 4px;">
-                            Kit de materiais: <span style="color: #bdbdc0;">{materiais_str}</span>
+                        <div class="chip-group">
+                            {chips_html}
                         </div>
                     </div>
                     <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
                         {pill_status}
-                        <span class="mono" style="font-size: 11.5px; color: #8a8c92;">Abertura: {data_abertura}</span>
+                        <span class="mono" style="font-size: 0.75rem; color: #64748B;">Abertura: {data_abertura}</span>
                     </div>
                 </div>
             </div>
@@ -154,14 +191,12 @@ def renderizar_tela_ordens_servico():
                 defeito=os_item["defeito"],
                 prioridade=prioridade_item,
                 luminaria=f"{os_item.get('tipo_luminaria', 'LED')} {os_item.get('potencia', 100)}W",
-                latitude=os_item.get("latitude", -6.1611),
-                longitude=os_item.get("longitude", -35.6025),
                 materiais=materiais_lista,
             )
-            c_acao1, c_acao2, _ = st.columns([1.2, 1.2, 3.6])
+            c_acao1, c_acao2, _ = st.columns([1.3, 1.3, 3.4])
             with c_acao1:
                 if st.button(
-                    f"Dar baixa ({os_item['protocolo']})",
+                    f"Concluir O.S. ({os_item['protocolo']})",
                     key=f"btn_concluir_{os_item['protocolo']}",
                     type="primary",
                     use_container_width=True,

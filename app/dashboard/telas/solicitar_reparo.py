@@ -8,14 +8,19 @@ def renderizar_tela_solicitar_reparo():
 
     st.markdown(
         f"""
-        <div class="page-header">
+        <div class="command-hero">
             <div>
-                <h1 class="page-title">Solicitar reparo e kit de viatura</h1>
-                <p class="page-subtitle">Emissão de ordem de serviço com relação de peças e despacho por rota GPS.</p>
+                <div class="hero-badge">
+                    <span class="hero-dot"></span>
+                    Despacho Operacional · Equipe de Campo
+                </div>
+                <h1 class="hero-title">Solicitar Reparo e Kit de Viatura</h1>
+                <p class="hero-subtitle">Emissão de Ordem de Serviço com checklist de peças para embarque na viatura e envio imediato via WhatsApp.</p>
             </div>
-            <div class="page-meta">
-                <span>Postes na base: <span class="mono" style="color: #ffffff;">{len(todos_postes)}</span></span>
-                <span>Secretaria de Infraestrutura</span>
+            <div class="hero-right">
+                <div style="font-size: 0.72rem; color: #64748B; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700;">Ativos na Base</div>
+                <div class="mono" style="font-size: 1.05rem; font-weight: 700; color: #10B981; margin-top: 2px;">{len(todos_postes)} Postes</div>
+                <div style="font-size: 0.75rem; color: #94A3B8; margin-top: 2px;">Secretaria de Infraestrutura</div>
             </div>
         </div>
         """,
@@ -29,7 +34,7 @@ def renderizar_tela_solicitar_reparo():
         opcoes_postes = {
             f"{p['codigo']} · {p['logradouro']} ({p['bairro']})": p["codigo"] for p in todos_postes
         }
-        opcoes_lista = list(opcoes_postes.keys()) + ["+ Informar outro poste não listado"]
+        opcoes_lista = list(opcoes_postes.keys()) + ["+ Informar outro poste ainda não listado"]
 
         codigo_pre_selecionado = st.session_state.get("poste_selecionado_os")
         indice_padrao = 0
@@ -45,7 +50,7 @@ def renderizar_tela_solicitar_reparo():
             index=indice_padrao,
         )
 
-        if escolha_poste == "+ Informar outro poste não listado":
+        if escolha_poste == "+ Informar outro poste ainda não listado":
             modo_novo_poste = True
         else:
             codigo_poste = opcoes_postes[escolha_poste]
@@ -56,28 +61,32 @@ def renderizar_tela_solicitar_reparo():
     if poste and not modo_novo_poste:
         status_atual = poste.get("status", "normal")
         if status_atual in ("urgente", "defeito_urgente"):
-            pill_status = '<span class="status-pill negative">Defeito urgente</span>'
+            pill_status = '<span class="status-pill negative">Defeito Urgente</span>'
         elif status_atual == "chamado_aberto":
-            pill_status = '<span class="status-pill warning">Chamado aberto</span>'
+            pill_status = '<span class="status-pill warning">O.S. em Aberto</span>'
         else:
             pill_status = '<span class="status-pill positive">Operacional</span>'
 
         st.markdown(
             f"""
-            <div class="panel-card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; padding: 16px 20px; margin-bottom: 20px;">
+            <div class="panel-card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; border-color: rgba(16, 185, 129, 0.28);">
                 <div>
                     <div style="display: flex; align-items: center; gap: 10px;">
-                        <span class="mono" style="font-size: 18px; font-weight: 600; color: #ffffff;">{poste['codigo']}</span>
+                        <span class="mono" style="font-size: 1.25rem; font-weight: 800; color: #FFFFFF;">{poste['codigo']}</span>
                         {pill_status}
                     </div>
-                    <div style="font-size: 13px; color: #8a8c92; margin-top: 4px;">
-                        {poste['logradouro']} · {poste['bairro']}{f" · {poste['referencia']}" if poste.get('referencia') else ""}
+                    <div style="font-size: 0.88rem; color: #94A3B8; margin-top: 4px;">
+                        {poste['logradouro']} · <strong style="color: #E2E8F0;">{poste['bairro']}</strong>{f" · {poste['referencia']}" if poste.get('referencia') else ""}
                     </div>
                 </div>
-                <div style="text-align: right;">
-                    <div style="font-size: 12px; color: #8a8c92;">Conjunto instalado</div>
-                    <div style="font-size: 13.5px; font-weight: 500; color: #ffffff; margin-top: 2px;">
-                        {poste['tipo_luminaria']} <span class="mono">{poste['potencia']}W</span> · {poste['tipo_braco']}
+                <div style="display: flex; gap: 12px;">
+                    <div class="spec-tile" style="padding: 8px 14px;">
+                        <div class="spec-tile-label">Luminária</div>
+                        <div class="spec-tile-val">{poste['tipo_luminaria']} <span class="mono" style="color: #34D399;">{poste['potencia']}W</span></div>
+                    </div>
+                    <div class="spec-tile" style="padding: 8px 14px;">
+                        <div class="spec-tile-label">Braço / Suporte</div>
+                        <div class="spec-tile-val">{poste['tipo_braco']}</div>
                     </div>
                 </div>
             </div>
@@ -88,23 +97,33 @@ def renderizar_tela_solicitar_reparo():
     with st.form("form_ordem_servico"):
         if modo_novo_poste:
             st.markdown(
-                '<div style="font-size: 15px; font-weight: 600; color: #ffffff; margin-bottom: 12px;">Identificação do poste</div>',
+                """
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                    <span class="status-pill positive">1</span>
+                    <span style="font-family: 'Outfit', sans-serif; font-size: 1.05rem; font-weight: 700; color: #FFFFFF;">Identificação do Poste</span>
+                </div>
+                """,
                 unsafe_allow_html=True,
             )
-            cp1, cp2, cp3 = st.columns([1, 1.5, 1])
+            cp1, cp2, cp3 = st.columns([1, 1.6, 1])
             with cp1:
-                novo_codigo = st.text_input("Código / Identificação do poste", placeholder="Ex: P-01, CSR-102...")
+                novo_codigo = st.text_input("Código / Identificação do poste", placeholder="Ex: P-01, Posto-04...")
             with cp2:
                 novo_logradouro = st.text_input("Logradouro / Rua", placeholder="Ex: Rua Manoel Cirilo")
             with cp3:
                 novo_bairro = st.text_input("Bairro / Comunidade", value="Centro")
             st.markdown(
-                '<div style="height: 1px; background: #1b1a1f; margin: 16px 0;"></div>',
+                '<div style="height: 1px; background: rgba(255, 255, 255, 0.08); margin: 18px 0;"></div>',
                 unsafe_allow_html=True,
             )
 
         st.markdown(
-            '<div style="font-size: 15px; font-weight: 600; color: #ffffff; margin-bottom: 12px;">Diagnóstico da ocorrência</div>',
+            """
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                <span class="status-pill warning">Diagnóstico</span>
+                <span style="font-family: 'Outfit', sans-serif; font-size: 1.05rem; font-weight: 700; color: #FFFFFF;">Ocorrência Constatada em Campo</span>
+            </div>
+            """,
             unsafe_allow_html=True,
         )
         col_def, col_prio = st.columns([2, 1])
@@ -131,9 +150,16 @@ def renderizar_tela_solicitar_reparo():
             )
 
         st.markdown(
-            '<div style="height: 1px; background: #1b1a1f; margin: 16px 0;"></div>'
-            '<div style="font-size: 15px; font-weight: 600; color: #ffffff; margin-bottom: 4px;">Kit de peças para a viatura</div>'
-            '<div style="font-size: 12.5px; color: #8a8c92; margin-bottom: 14px;">Marque os insumos que o eletricista deve embarcar antes da saída.</div>',
+            """
+            <div style="height: 1px; background: rgba(255, 255, 255, 0.08); margin: 18px 0;"></div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="status-pill positive">Kit Viatura</span>
+                    <span style="font-family: 'Outfit', sans-serif; font-size: 1.05rem; font-weight: 700; color: #FFFFFF;">Relação de Peças e Materiais</span>
+                </div>
+                <span style="font-size: 0.78rem; color: #94A3B8;">Insumos que o eletricista deve embarcar</span>
+            </div>
+            """,
             unsafe_allow_html=True,
         )
 
@@ -174,7 +200,7 @@ def renderizar_tela_solicitar_reparo():
             )
 
         st.markdown(
-            '<div style="height: 1px; background: #1b1a1f; margin: 16px 0;"></div>',
+            '<div style="height: 1px; background: rgba(255, 255, 255, 0.08); margin: 18px 0;"></div>',
             unsafe_allow_html=True,
         )
 
@@ -190,7 +216,7 @@ def renderizar_tela_solicitar_reparo():
             )
 
         submeter = st.form_submit_button(
-            "Emitir ordem de serviço", type="primary", use_container_width=True
+            "Emitir Ordem de Serviço", type="primary", use_container_width=True
         )
 
     if submeter:
@@ -252,18 +278,18 @@ def renderizar_tela_solicitar_reparo():
 
         st.markdown(
             f"""
-            <div class="panel-card" style="border-color: #44a282; margin-top: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+            <div class="panel-card" style="border-color: #10B981; margin-top: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
                 <div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span class="status-pill positive">O.S. registrada</span>
-                        <span class="mono" style="font-size: 15px; font-weight: 600; color: #ffffff;">{protocolo}</span>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span class="status-pill positive">O.S. Emitida</span>
+                        <span class="mono" style="font-size: 1.1rem; font-weight: 800; color: #FFFFFF;">{protocolo}</span>
                     </div>
-                    <div style="font-size: 13px; color: #8a8c92; margin-top: 6px;">
-                        Poste <span class="mono" style="color: #ffffff;">{cod_alvo}</span> salvo na base. Despache a ficha técnica para o eletricista.
+                    <div style="font-size: 0.85rem; color: #94A3B8; margin-top: 6px;">
+                        Poste <span class="mono" style="color: #F8FAFC; font-weight: 700;">{cod_alvo}</span> atualizado na base. Envie o despacho para o eletricista:
                     </div>
                 </div>
-                <a href="{zap_url}" target="_blank" style="background: #ffffff; color: #111111; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 13px; display: inline-flex; align-items: center;">
-                    Enviar despacho via WhatsApp
+                <a href="{zap_url}" target="_blank" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: #FFFFFF; padding: 10px 18px; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 0.86rem; box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);">
+                    Enviar Despacho via WhatsApp
                 </a>
             </div>
             """,

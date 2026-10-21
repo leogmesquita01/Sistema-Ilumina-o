@@ -10,10 +10,10 @@ from app.servicos.dados_postes import listar_postes, obter_resumo_indicadores, o
 
 def _status_pill_html(status: str) -> str:
     if status in ("urgente", "defeito_urgente"):
-        return '<span class="status-pill negative">Defeito urgente</span>'
+        return '<span class="status-pill negative">● Defeito Urgente</span>'
     if status == "chamado_aberto":
-        return '<span class="status-pill warning">Chamado aberto</span>'
-    return '<span class="status-pill positive">Operacional</span>'
+        return '<span class="status-pill warning">● Chamado Aberto</span>'
+    return '<span class="status-pill positive">● Operacional</span>'
 
 
 def renderizar_tela_mapa():
@@ -28,65 +28,102 @@ def renderizar_tela_mapa():
     os_concluidas = stats["os_concluidas"]
 
     if total_postes == 0:
-        finding_texto = "Base pronta para receber o cadastro ou importação dos postes anotados pelo município."
+        subtitulo = "Base municipal pronta — cadastre postes em campo ou importe sua planilha de controle."
     elif total_chamados > 0:
-        finding_texto = (
-            f"{total_chamados} postes aguardam manutenção na rede municipal ({os_abertas} O.S. em aberto)."
-        )
+        subtitulo = f"Atenção operacional: {total_chamados} ponto(s) aguardam manutenção ({os_abertas} O.S. em aberto)."
     else:
-        finding_texto = "Todos os postes cadastrados operam sem chamados pendentes."
+        subtitulo = "Rede operando com 100% de disponibilidade nos pontos monitorados."
 
     st.markdown(
         f"""
-        <div class="page-header">
+        <div class="command-hero">
             <div>
-                <h1 class="page-title">Mapa da rede e postes cadastrados</h1>
-                <p class="page-subtitle">{finding_texto}</p>
+                <div class="hero-badge">
+                    <span class="hero-dot"></span>
+                    CENTRO DE OPERAÇÕES &bull; BOA SAÚDE / RN
+                </div>
+                <h1 class="hero-title">Mapa da Rede &amp; Ativos de Iluminação</h1>
+                <p class="hero-subtitle">{subtitulo}</p>
             </div>
-            <div class="page-meta">
-                <span>Sincronizado às <span class="mono" style="color: #ffffff;">{hora_atual}</span></span>
-                <span>Município de Boa Saúde / RN</span>
+            <div class="hero-right">
+                <div class="mono" style="font-size: 0.85rem; color: #34D399; font-weight: 700;">Sincronizado às {hora_atual}</div>
+                <div style="font-size: 0.74rem; color: #94A3B8; margin-top: 3px;">Secretaria de Obras e Infraestrutura</div>
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    cor_chamado_val = "color: #e5566f;" if total_chamados > 0 else ""
+    pct_chamados = min(100, int((total_chamados / total_postes) * 100)) if total_postes > 0 else 0
+    total_os = os_abertas + os_concluidas
+    pct_os_concluidas = int((os_concluidas / total_os) * 100) if total_os > 0 else 100
+
     st.markdown(
         f"""
-        <div class="kpi-strip">
-            <div class="kpi-cell">
-                <div class="kpi-label">Postes cadastrados</div>
-                <div class="kpi-value-row">
-                    <span class="kpi-value lead">{total_postes:,}</span>
-                    <span class="kpi-unit">ativos</span>
+        <div class="bento-kpi-grid">
+            <div class="bento-kpi-card">
+                <div class="bento-kpi-top">
+                    <span class="bento-kpi-label">Postes Cadastrados</span>
+                    <div class="bento-kpi-icon emerald">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v20M5 6h14M7 10h10"/></svg>
+                    </div>
                 </div>
-                <div class="kpi-sub">Base própria da Secretaria</div>
+                <div class="bento-kpi-value">{total_postes:,}</div>
+                <div class="bento-kpi-bar">
+                    <div class="bento-kpi-bar-fill" style="width: {100 if total_postes > 0 else 8}%; background: linear-gradient(90deg, #10B981, #34D399);"></div>
+                </div>
+                <div class="bento-kpi-sub">
+                    <span>Base própria municipal</span>
+                    <span class="mono" style="color: #34D399;">Ativo</span>
+                </div>
             </div>
-            <div class="kpi-cell">
-                <div class="kpi-label">Cobertura em LED</div>
-                <div class="kpi-value-row">
-                    <span class="kpi-value">{taxa_led}%</span>
-                    <span class="kpi-unit">{total_led} de {total_postes}</span>
+            <div class="bento-kpi-card">
+                <div class="bento-kpi-top">
+                    <span class="bento-kpi-label">Cobertura em LED</span>
+                    <div class="bento-kpi-icon cyan">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2"/></svg>
+                    </div>
                 </div>
-                <div class="kpi-sub">{total_postes - total_led} lâmpadas convencionais</div>
+                <div class="bento-kpi-value">{taxa_led}%</div>
+                <div class="bento-kpi-bar">
+                    <div class="bento-kpi-bar-fill" style="width: {taxa_led}%; background: linear-gradient(90deg, #0EA5E9, #38BDF8);"></div>
+                </div>
+                <div class="bento-kpi-sub">
+                    <span>{total_led} luminárias LED</span>
+                    <span class="mono">{total_postes - total_led} convenc.</span>
+                </div>
             </div>
-            <div class="kpi-cell">
-                <div class="kpi-label">Postes com defeito</div>
-                <div class="kpi-value-row">
-                    <span class="kpi-value" style="{cor_chamado_val}">{total_chamados}</span>
-                    <span class="kpi-unit">pontos</span>
+            <div class="bento-kpi-card">
+                <div class="bento-kpi-top">
+                    <span class="bento-kpi-label">Pontos em Alerta</span>
+                    <div class="bento-kpi-icon rose">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    </div>
                 </div>
-                <div class="kpi-sub">Chamados abertos ou urgentes</div>
+                <div class="bento-kpi-value" style="{'color: #FB7185;' if total_chamados > 0 else ''}">{total_chamados}</div>
+                <div class="bento-kpi-bar">
+                    <div class="bento-kpi-bar-fill" style="width: {pct_chamados}%; background: linear-gradient(90deg, #F59E0B, #F43F5E);"></div>
+                </div>
+                <div class="bento-kpi-sub">
+                    <span>Chamados pendentes</span>
+                    <span class="mono">{pct_chamados}% da rede</span>
+                </div>
             </div>
-            <div class="kpi-cell">
-                <div class="kpi-label">Ordens de serviço</div>
-                <div class="kpi-value-row">
-                    <span class="kpi-value">{os_abertas}</span>
-                    <span class="kpi-unit">abertas</span>
+            <div class="bento-kpi-card">
+                <div class="bento-kpi-top">
+                    <span class="bento-kpi-label">Ordens de Serviço</span>
+                    <div class="bento-kpi-icon amber">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    </div>
                 </div>
-                <div class="kpi-sub">{os_concluidas} concluídas no histórico</div>
+                <div class="bento-kpi-value">{os_abertas}</div>
+                <div class="bento-kpi-bar">
+                    <div class="bento-kpi-bar-fill" style="width: {pct_os_concluidas}%; background: linear-gradient(90deg, #F59E0B, #10B981);"></div>
+                </div>
+                <div class="bento-kpi-sub">
+                    <span>Em fila de campo</span>
+                    <span class="mono" style="color: #34D399;">{os_concluidas} concluídas</span>
+                </div>
             </div>
         </div>
         """,
@@ -97,8 +134,8 @@ def renderizar_tela_mapa():
 
     with col_busca:
         busca_termo = st.text_input(
-            "Buscar por código, rua ou bairro",
-            placeholder="Digite o código anotado, nome da rua ou comunidade...",
+            "Pesquisar poste por código, rua ou comunidade",
+            placeholder="Digite o código anotado (ex: P-01), rua ou bairro...",
         )
 
     with col_filtro:
@@ -113,7 +150,7 @@ def renderizar_tela_mapa():
 
     with col_camada:
         camada_padrao = st.selectbox(
-            "Camada base do mapa",
+            "Visualização do mapa",
             ["Mapa de ruas", "Satélite (Esri)", "Modo noturno (Dark)"],
         )
 
@@ -141,7 +178,7 @@ def renderizar_tela_mapa():
                     break
 
         selecao_inspecao = st.selectbox(
-            "Inspecionar ativo",
+            "Selecionar ativo para inspeção",
             options=opcoes_inspecao,
             index=idx_inspecao,
         )
@@ -159,6 +196,20 @@ def renderizar_tela_mapa():
         zoom_inicial = 15
 
     with col_mapa:
+        st.markdown(
+            """
+            <div style="display: flex; justify-content: space-between; align-items: center; background: #111A29; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 10px 16px; margin-bottom: 10px;">
+                <span style="font-size: 0.82rem; font-weight: 700; color: #F8FAFC;">Geolocalização &bull; Boa Saúde / RN</span>
+                <div style="display: flex; gap: 14px; font-size: 0.75rem; color: #94A3B8;">
+                    <span style="display: inline-flex; align-items: center; gap: 5px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #10B981;"></span>Operacional</span>
+                    <span style="display: inline-flex; align-items: center; gap: 5px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #F59E0B;"></span>Chamado</span>
+                    <span style="display: inline-flex; align-items: center; gap: 5px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #F43F5E;"></span>Urgente</span>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
         m = folium.Map(
             location=centro_mapa,
             zoom_start=zoom_inicial,
@@ -219,10 +270,10 @@ def renderizar_tela_mapa():
                 status_label = "Defeito urgente"
 
             popup_html = f"""
-                <div style="font-family: 'Public Sans', sans-serif; min-width: 180px; color: #111111;">
-                    <div style="font-family: monospace; font-weight: 700; font-size: 13px; margin-bottom: 2px;">{p['codigo']}</div>
-                    <div style="font-size: 12px; color: #4b4d4f; margin-bottom: 6px;">{p['logradouro']} · {p['bairro']}</div>
-                    <div style="border-top: 1px solid #e5e7eb; padding-top: 6px; font-size: 11.5px;">
+                <div style="font-family: 'Plus Jakarta Sans', sans-serif; min-width: 185px; color: #0F172A;">
+                    <div style="font-family: monospace; font-weight: 800; font-size: 13.5px; color: #059669; margin-bottom: 2px;">Poste {p['codigo']}</div>
+                    <div style="font-size: 12px; color: #334155; margin-bottom: 6px;">{p['logradouro']} &bull; {p['bairro']}</div>
+                    <div style="border-top: 1px solid #E2E8F0; padding-top: 6px; font-size: 11.5px;">
                         Luminária: <b>{p['tipo_luminaria']} {p['potencia']}W</b><br>
                         Status: <b>{status_label}</b>
                     </div>
@@ -237,7 +288,7 @@ def renderizar_tela_mapa():
             )
             marcador.add_to(cluster)
 
-        components.html(m.get_root().render(), height=520)
+        components.html(m.get_root().render(), height=500)
 
     with col_detalhes:
         if poste_focado:
@@ -248,13 +299,31 @@ def renderizar_tela_mapa():
 
             st.markdown(
                 f"""
-                <div class="panel-card">
+                <div class="panel-card" style="border-color: rgba(16, 185, 129, 0.3);">
                     <div class="panel-header">
                         <div>
-                            <div style="font-size: 11.5px; color: #8a8c92;">Identificação do poste</div>
-                            <div class="mono" style="font-size: 20px; font-weight: 600; color: #ffffff; margin-top: 2px;">{p_completo['codigo']}</div>
+                            <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: #34D399; font-weight: 700;">Dossiê Técnico do Ativo</div>
+                            <div class="mono" style="font-size: 1.55rem; font-weight: 800; color: #FFFFFF; margin-top: 2px;">{p_completo['codigo']}</div>
                         </div>
                         {pill_html}
+                    </div>
+                    <div class="spec-grid">
+                        <div class="spec-tile">
+                            <div class="spec-tile-label">Luminária</div>
+                            <div class="spec-tile-val" style="color: #38BDF8;">{p_completo['tipo_luminaria']} <span class="mono">{potencia_val}W</span></div>
+                        </div>
+                        <div class="spec-tile">
+                            <div class="spec-tile-label">Consumo (12h/dia)</div>
+                            <div class="spec-tile-val mono" style="color: #34D399;">{consumo_mensal_kwh} kWh/mês</div>
+                        </div>
+                        <div class="spec-tile">
+                            <div class="spec-tile-label">Estrutura</div>
+                            <div class="spec-tile-val">{p_completo['tipo_poste']}</div>
+                        </div>
+                        <div class="spec-tile">
+                            <div class="spec-tile-label">Braço</div>
+                            <div class="spec-tile-val">{p_completo['tipo_braco']}</div>
+                        </div>
                     </div>
                     <div class="kv-list">
                         <div class="kv-row">
@@ -266,20 +335,8 @@ def renderizar_tela_mapa():
                             <span class="kv-val">{p_completo['bairro']}</span>
                         </div>
                         <div class="kv-row">
-                            <span class="kv-key">Referência</span>
+                            <span class="kv-key">Ponto de referência</span>
                             <span class="kv-val">{p_completo.get('referencia') or '—'}</span>
-                        </div>
-                        <div class="kv-row">
-                            <span class="kv-key">Luminária e potência</span>
-                            <span class="kv-val">{p_completo['tipo_luminaria']} <span class="mono">{potencia_val}W</span></span>
-                        </div>
-                        <div class="kv-row">
-                            <span class="kv-key">Consumo estimado (12h/dia)</span>
-                            <span class="kv-val mono">{consumo_mensal_kwh} kWh/mês</span>
-                        </div>
-                        <div class="kv-row">
-                            <span class="kv-key">Estrutura e braço</span>
-                            <span class="kv-val">{p_completo['tipo_poste']} · {p_completo['tipo_braco']}</span>
                         </div>
                     </div>
                 </div>
@@ -290,9 +347,9 @@ def renderizar_tela_mapa():
             if p_completo.get("observacoes"):
                 st.markdown(
                     f"""
-                    <div class="panel-card" style="padding: 14px 16px;">
-                        <div style="font-size: 12px; color: #8a8c92; margin-bottom: 4px;">Observações de campo</div>
-                        <div style="font-size: 13px; color: #ffffff;">{p_completo['observacoes']}</div>
+                    <div class="panel-card" style="padding: 14px 18px;">
+                        <div style="font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; color: #94A3B8; font-weight: 700; margin-bottom: 4px;">Observações de Campo</div>
+                        <div style="font-size: 0.86rem; color: #F8FAFC;">{p_completo['observacoes']}</div>
                     </div>
                     """,
                     unsafe_allow_html=True,
@@ -306,24 +363,24 @@ def renderizar_tela_mapa():
 
             c_btn1, c_btn2 = st.columns(2)
             with c_btn1:
-                if st.button("Abrir O.S. de reparo", type="primary", use_container_width=True):
+                if st.button("Solicitar Reparo", type="primary", use_container_width=True):
                     st.session_state["poste_selecionado_os"] = p_completo["codigo"]
                     st.session_state["pagina_atual"] = ":material/handyman: Solicitar reparo"
                     st.rerun()
             with c_btn2:
-                st.link_button("Rota no Google Maps", maps_url, use_container_width=True)
+                st.link_button("Abrir no Google Maps", maps_url, use_container_width=True)
 
         else:
             contagem_bairros = Counter(p.get("bairro", "Centro") for p in postes)
             maior_qtd = max(contagem_bairros.values()) if contagem_bairros else 1
             barras_html = ""
             for bairro_nome, qtd in contagem_bairros.most_common(5):
-                largura_pct = int((qtd / maior_qtd) * 88)
+                largura_pct = int((qtd / maior_qtd) * 100)
                 barras_html += (
                     '<div class="bar-list-row">'
                     '<div class="bar-list-top">'
-                    f'<span style="color: #ffffff;">{bairro_nome}</span>'
-                    f'<span class="mono" style="color: #8a8c92;">{qtd}</span>'
+                    f'<span style="color: #F8FAFC;">{bairro_nome}</span>'
+                    f'<span class="mono" style="color: #34D399; font-weight: 700;">{qtd} poste(s)</span>'
                     '</div>'
                     '<div class="bar-list-track">'
                     f'<div class="bar-list-fill" style="width: {largura_pct}%;"></div>'
@@ -335,10 +392,10 @@ def renderizar_tela_mapa():
                 f"""
                 <div class="panel-card">
                     <div class="panel-header">
-                        <span class="panel-title">Distribuição por localidade</span>
-                        <span class="panel-meta">{len(postes)} exibidos</span>
+                        <span class="panel-title">Distribuição por Localidade</span>
+                        <span class="panel-meta">{len(postes)} ativos</span>
                     </div>
-                    {barras_html if barras_html else '<div style="color: #8a8c92; font-size: 13px;">Nenhum poste cadastrado ainda.</div>'}
+                    {barras_html if barras_html else '<div style="color: #94A3B8; font-size: 0.85rem; padding: 8px 0;">Nenhum poste cadastrado ainda. Utilize os botões abaixo para iniciar sua base.</div>'}
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -355,8 +412,8 @@ def renderizar_tela_mapa():
                     pill = _status_pill_html(item["status"])
                     linhas_tabela += (
                         '<tr>'
-                        f'<td class="mono" style="font-weight: 500;">{item["codigo"]}</td>'
-                        f'<td>{item["logradouro"]}<div style="font-size: 11.5px; color: #8a8c92;">{item["bairro"]}</div></td>'
+                        f'<td class="mono" style="font-weight: 700; color: #38BDF8;">{item["codigo"]}</td>'
+                        f'<td><div style="font-weight: 600;">{item["logradouro"]}</div><div style="font-size: 0.75rem; color: #94A3B8;">{item["bairro"]}</div></td>'
                         f'<td class="num">{item["potencia"]}W</td>'
                         f'<td style="text-align: right;">{pill}</td>'
                         '</tr>'
@@ -366,8 +423,8 @@ def renderizar_tela_mapa():
                     f"""
                     <div class="panel-card">
                         <div class="panel-header">
-                            <span class="panel-title">Postes cadastrados</span>
-                            <span class="panel-meta">Recentes e prioritários</span>
+                            <span class="panel-title">Postes Monitorados</span>
+                            <span class="panel-meta">Visão rápida</span>
                         </div>
                         <table class="clean-table">
                             <thead>
@@ -375,7 +432,7 @@ def renderizar_tela_mapa():
                                     <th>Código</th>
                                     <th>Localização</th>
                                     <th class="num">Potência</th>
-                                    <th style="text-align: right;">Estado</th>
+                                    <th style="text-align: right;">Status</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -387,12 +444,21 @@ def renderizar_tela_mapa():
                     unsafe_allow_html=True,
                 )
             else:
+                st.markdown(
+                    """
+                    <div class="panel-card" style="border-style: dashed; border-color: rgba(16, 185, 129, 0.35); text-align: center; padding: 24px 20px;">
+                        <div style="font-family: 'Outfit', sans-serif; font-size: 1.05rem; font-weight: 700; color: #FFFFFF; margin-bottom: 6px;">Comece a Alimentar a Base Municipal</div>
+                        <div style="font-size: 0.84rem; color: #94A3B8; margin-bottom: 4px;">Cadastre um poste individualmente ou envie sua planilha com a relação que já possui anotada.</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
                 c_ac1, c_ac2 = st.columns(2)
                 with c_ac1:
-                    if st.button("Cadastrar poste", type="primary", use_container_width=True):
+                    if st.button("Cadastrar Poste", type="primary", use_container_width=True):
                         st.session_state["pagina_atual"] = ":material/add_location_alt: Cadastrar poste"
                         st.rerun()
                 with c_ac2:
-                    if st.button("Importar planilha", use_container_width=True):
+                    if st.button("Importar Planilha", use_container_width=True):
                         st.session_state["pagina_atual"] = ":material/upload_file: Importar planilha"
                         st.rerun()

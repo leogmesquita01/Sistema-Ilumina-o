@@ -1,18 +1,25 @@
 import streamlit as st
-from app.servicos.dados_postes import cadastrar_poste
+from app.servicos.dados_postes import cadastrar_poste, listar_postes
 
 
 def renderizar_tela_cadastrar():
+    total_atual = len(listar_postes())
+
     st.markdown(
-        """
-        <div class="page-header">
+        f"""
+        <div class="command-hero">
             <div>
-                <h1 class="page-title">Cadastrar poste em campo</h1>
-                <p class="page-subtitle">Registro individual de ativo de iluminação pública na base própria do município.</p>
+                <div class="hero-badge">
+                    <span class="hero-dot"></span>
+                    Inventário Municipal · Base Própria
+                </div>
+                <h1 class="hero-title">Cadastrar Poste em Campo</h1>
+                <p class="hero-subtitle">Registro rápido de ativo de iluminação pública sem necessidade de coordenadas GPS.</p>
             </div>
-            <div class="page-meta">
-                <span>Destino: <span class="mono" style="color: #ffffff;">Supabase · public.postes</span></span>
-                <span>Secretaria de Infraestrutura</span>
+            <div class="hero-right">
+                <div style="font-size: 0.72rem; color: #64748B; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700;">Base Sincronizada</div>
+                <div class="mono" style="font-size: 1.05rem; font-weight: 700; color: #10B981; margin-top: 2px;">{total_atual} Postes</div>
+                <div style="font-size: 0.75rem; color: #94A3B8; margin-top: 2px;">Supabase · public.postes</div>
             </div>
         </div>
         """,
@@ -21,21 +28,31 @@ def renderizar_tela_cadastrar():
 
     with st.form("form_cadastrar_poste"):
         st.markdown(
-            '<div style="font-size: 15px; font-weight: 600; color: #ffffff; margin-bottom: 12px;">Identificação e localização</div>',
+            """
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                <span class="status-pill positive">Localização</span>
+                <span style="font-family: 'Outfit', sans-serif; font-size: 1.05rem; font-weight: 700; color: #FFFFFF;">Identificação e Endereço</span>
+            </div>
+            """,
             unsafe_allow_html=True,
         )
         c1, c2 = st.columns(2)
         with c1:
-            codigo = st.text_input("Código / Identificação do poste", placeholder="Ex: P-01, CSR-1099...")
+            codigo = st.text_input("Código / Identificação do poste", placeholder="Ex: P-01, Posto-02, RuaA-05...")
             logradouro = st.text_input("Logradouro / Rua", placeholder="Ex: Rua Manoel Cirilo")
 
         with c2:
             bairro = st.text_input("Bairro ou comunidade rural", value="Centro")
-            referencia = st.text_input("Ponto de referência", placeholder="Ex: Em frente à UBS")
+            referencia = st.text_input("Ponto de referência", placeholder="Ex: Em frente à UBS / Próximo à praça")
 
         st.markdown(
-            '<div style="height: 1px; background: #1b1a1f; margin: 16px 0;"></div>'
-            '<div style="font-size: 15px; font-weight: 600; color: #ffffff; margin-bottom: 12px;">Luminária e estrutura física</div>',
+            """
+            <div style="height: 1px; background: rgba(255, 255, 255, 0.08); margin: 18px 0;"></div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                <span class="status-pill neutral">Especificação</span>
+                <span style="font-family: 'Outfit', sans-serif; font-size: 1.05rem; font-weight: 700; color: #FFFFFF;">Luminária e Estrutura Física</span>
+            </div>
+            """,
             unsafe_allow_html=True,
         )
 
@@ -61,7 +78,7 @@ def renderizar_tela_cadastrar():
             placeholder="Condição do relé fotoelétrico, presença de transformador, estado da fiação...",
         )
 
-        salvar = st.form_submit_button("Registrar poste na base", type="primary", use_container_width=True)
+        salvar = st.form_submit_button("Registrar Poste na Base", type="primary", use_container_width=True)
 
     if salvar:
         if not codigo or not codigo.strip():
@@ -82,14 +99,14 @@ def renderizar_tela_cadastrar():
             })
             st.markdown(
                 f"""
-                <div class="panel-card" style="border-color: #44a282; margin-top: 14px; display: flex; justify-content: space-between; align-items: center;">
+                <div class="panel-card" style="border-color: #10B981; margin-top: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                     <div>
-                        <span class="status-pill positive">Ativo gravado</span>
-                        <span style="font-size: 13px; color: #ffffff; margin-left: 10px;">
-                            Poste <span class="mono" style="font-weight: 600;">{codigo.strip()}</span> cadastrado com sucesso no Supabase.
+                        <span class="status-pill positive">Ativo Registrado</span>
+                        <span style="font-size: 0.9rem; color: #FFFFFF; margin-left: 10px;">
+                            Poste <span class="mono" style="font-weight: 700; color: #34D399;">{codigo.strip()}</span> gravado com sucesso no banco de dados.
                         </span>
                     </div>
-                    <span style="font-size: 12px; color: #8a8c92;">{logradouro or 'Não informado'} · {bairro}</span>
+                    <span style="font-size: 0.82rem; color: #94A3B8;">{logradouro or 'Não informado'} · {bairro}</span>
                 </div>
                 """,
                 unsafe_allow_html=True,
