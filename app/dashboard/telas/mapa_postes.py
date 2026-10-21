@@ -1,7 +1,7 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import folium
 from folium import plugins
-from streamlit_folium import st_folium
 import datetime
 from collections import Counter
 from app.servicos.dados_postes import listar_postes, obter_resumo_indicadores, obter_poste_por_codigo
@@ -26,7 +26,6 @@ def renderizar_tela_mapa():
     os_abertas = stats["os_abertas"]
     os_concluidas = stats["os_concluidas"]
 
-    # Finding factual a partir dos dados reais
     if total_chamados > 0:
         finding_texto = (
             f"{total_chamados} postes aguardam manutenção na rede municipal ({os_abertas} O.S. em aberto)."
@@ -50,7 +49,6 @@ def renderizar_tela_mapa():
         unsafe_allow_html=True,
     )
 
-    # Divided KPI Strip (1 container, 4 colunas separadas por 1px hairline)
     cor_chamado_val = "color: #e5566f;" if total_chamados > 0 else ""
     st.markdown(
         f"""
@@ -113,18 +111,42 @@ def renderizar_tela_mapa():
     with col_camada:
         camada_padrao = st.selectbox(
             "Camada base do mapa",
-            ["Modo noturno (Dark)", "Mapa de ruas", "Satélite (Esri)"],
+            ["Mapa de ruas", "Satélite (Esri)", "Modo noturno (Dark)"],
         )
 
     postes = listar_postes(filtro_status=filtro_status, termo_busca=busca_termo)
 
     poste_focado = None
-    if busca_termo:
+    if busca_termo and busca_termo.strip():
         exatos = [p for p in postes if p["codigo"].lower() == busca_termo.strip().lower()]
         if exatos:
             poste_focado = exatos[0]
         elif postes:
             poste_focado = postes[0]
+
+    col_mapa, col_detalhes = st.columns([3, 2], gap="medium")
+
+    with col_detalhes:
+        opcoes_inspecao = ["Visão geral da rede"] + [
+            f"{p['codigo']} · {p['logradouro']} ({p['bairro']})" for p in postes
+        ]
+        idx_inspecao = 0
+        if poste_focado:
+            for i, p in enumerate(postes, start=1):
+                if p["codigo"] == poste_focado["codigo"]:
+                    idx_inspecao = i
+                    break
+
+        selecao_inspecao = st.selectbox(
+            "Inspecionar ativo",
+            options=opcoes_inspecao,
+            index=idx_inspecao,
+        )
+        if selecao_inspecao != "Visão geral da rede":
+            cod_sel = selecao_inspecao.split("·")[0].strip()
+            encontrados = [p for p in postes if p["codigo"] == cod_sel]
+            if encontrados:
+                poste_focado = encontrados[0]
 
     if poste_focado:
         centro_mapa = [poste_focado["latitude"], poste_focado["longitude"]]
@@ -133,49 +155,39 @@ def renderizar_tela_mapa():
         centro_mapa = [-6.1611, -35.6025]
         zoom_inicial = 15
 
-    col_mapa, col_detalhes = st.columns([3.1, 1.9], gap="medium")
-
     with col_mapa:
-        tiles_inicial = "CartoDB dark_matter" if camada_padrao == "Modo noturno (Dark)" else "OpenStreetMap"
         m = folium.Map(
             location=centro_mapa,
             zoom_start=zoom_inicial,
-            tiles=tiles_inicial,
+            tiles=None,
             control_scale=True,
         )
-
-        if camada_padrao == "Satélite (Esri)":
-            folium.TileLayer(
-                tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-                attr="Esri World Imagery",
-                name="Satélite (Esri)",
-                overlay=False,
-                control=True,
-            ).add_to(m)
 
         folium.TileLayer(
             tiles="OpenStreetMap",
             name="Mapa de ruas",
             overlay=False,
             control=True,
+            show=(camada_padrao == "Mapa de ruas"),
         ).add_to(m)
 
         folium.TileLayer(
-            tiles="CartoDB dark_matter",
+            tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+            attr="Esri World Imagery",
+            name="Satélite (Esri)",
+            overlay=False,
+            control=True,
+            show=(camada_padrao == "Satélite (Esri)"),
+        ).add_to(m)
+
+        folium.TileLayer(
+            tiles="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
             attr="CartoDB Dark",
             name="Modo noturno (Dark)",
             overlay=False,
             control=True,
+            show=(camada_padrao == "Modo noturno (Dark)"),
         ).add_to(m)
-
-        if camada_padrao != "Satélite (Esri)":
-            folium.TileLayer(
-                tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-                attr="Esri World Imagery",
-                name="Satélite (Esri)",
-                overlay=False,
-                control=True,
-            ).add_to(m)
 
         plugins.LocateControl(
             auto_start=False,
@@ -184,7 +196,9 @@ def renderizar_tela_mapa():
             locate_options={"enableHighAccuracy": True, "maxZoom": 18},
         ).add_to(m)
 
+        plugins.MiniMap(toggle_display=True, position="bottomleft").add_to(m)
         folium.LayerControl(position="topright").add_to(m)
+
         cluster = plugins.MarkerCluster(name="Postes").add_to(m)
 
         for p in postes:
@@ -220,15 +234,7 @@ def renderizar_tela_mapa():
             )
             marcador.add_to(cluster)
 
-        mapa_interacao = st_folium(m, height=520, use_container_width=True)
-
-        # Se o usuário clicou em um marcador no mapa, foca nele automaticamente
-        if not poste_focado and mapa_interacao and mapa_interacao.get("last_object_clicked_tooltip"):
-            tooltip_clicado = mapa_interacao["last_object_clicked_tooltip"]
-            cod_clicado = tooltip_clicado.split("·")[0].strip()
-            encontrados = [p for p in postes if p["codigo"] == cod_clicado]
-            if encontrados:
-                poste_focado = encontrados[0]
+        components.html(m.get_root().render(), height=520)
 
     with col_detalhes:
         if poste_focado:
@@ -304,7 +310,6 @@ def renderizar_tela_mapa():
                 st.link_button("Rota no Google Maps", maps_url, use_container_width=True)
 
         else:
-            # Painel de distribuição por bairro/comunidade + fila de pontos com defeito
             contagem_bairros = Counter(p.get("bairro", "Centro") for p in postes)
             maior_qtd = max(contagem_bairros.values()) if contagem_bairros else 1
             barras_html = ""
@@ -335,7 +340,6 @@ def renderizar_tela_mapa():
                 unsafe_allow_html=True,
             )
 
-            # Tabela enxuta dos postes prioritários / visíveis
             postes_prioritarios = sorted(
                 postes,
                 key=lambda x: 0 if x["status"] in ("urgente", "defeito_urgente") else (1 if x["status"] == "chamado_aberto" else 2),
@@ -358,7 +362,7 @@ def renderizar_tela_mapa():
                 <div class="panel-card">
                     <div class="panel-header">
                         <span class="panel-title">Ativos prioritários</span>
-                        <span class="panel-meta">Clique no mapa para inspecionar</span>
+                        <span class="panel-meta">Ordens e alertas</span>
                     </div>
                     <table class="clean-table">
                         <thead>

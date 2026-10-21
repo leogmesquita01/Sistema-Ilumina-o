@@ -582,6 +582,13 @@ def aplicar_estilos() -> None:
             margin: 24px 0 !important;
         }
 
+        iframe {
+            border: 1px solid var(--border) !important;
+            border-radius: var(--radius-card) !important;
+            display: block !important;
+            width: 100% !important;
+        }
+
         @media (max-width: 768px) {
             .kpi-strip {
                 grid-template-columns: repeat(2, 1fr);
