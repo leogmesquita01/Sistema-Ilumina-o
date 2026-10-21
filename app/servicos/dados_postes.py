@@ -150,10 +150,12 @@ def obter_poste_por_codigo(codigo: str) -> Optional[Dict[str, Any]]:
 
 
 def cadastrar_poste(dados: Dict[str, Any]) -> bool:
+    lat_val = dados.get("latitude")
+    lng_val = dados.get("longitude")
     novo_poste = {
         "codigo": dados["codigo"].strip(),
-        "latitude": float(dados["latitude"]),
-        "longitude": float(dados["longitude"]),
+        "latitude": float(lat_val) if lat_val is not None else -6.1611,
+        "longitude": float(lng_val) if lng_val is not None else -35.6025,
         "logradouro": dados.get("logradouro") or "Não informado",
         "bairro": dados.get("bairro") or "Centro",
         "referencia": dados.get("referencia") or "",

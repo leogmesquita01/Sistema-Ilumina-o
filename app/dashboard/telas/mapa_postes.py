@@ -267,10 +267,6 @@ def renderizar_tela_mapa():
                             <span class="kv-val">{p_completo.get('referencia') or '—'}</span>
                         </div>
                         <div class="kv-row">
-                            <span class="kv-key">Coordenadas GPS</span>
-                            <span class="kv-val mono">{p_completo['latitude']:.5f}, {p_completo['longitude']:.5f}</span>
-                        </div>
-                        <div class="kv-row">
                             <span class="kv-key">Luminária e potência</span>
                             <span class="kv-val">{p_completo['tipo_luminaria']} <span class="mono">{potencia_val}W</span></span>
                         </div>
@@ -299,7 +295,12 @@ def renderizar_tela_mapa():
                     unsafe_allow_html=True,
                 )
 
-            maps_url = f"https://www.google.com/maps/dir/?api=1&destination={p_completo['latitude']},{p_completo['longitude']}"
+            import urllib.parse
+            if round(float(p_completo.get("latitude", -6.1611)), 4) != -6.1611 or round(float(p_completo.get("longitude", -35.6025)), 4) != -35.6025:
+                maps_url = f"https://www.google.com/maps/dir/?api=1&destination={p_completo['latitude']},{p_completo['longitude']}"
+            else:
+                end_q = urllib.parse.quote(f"{p_completo.get('logradouro', '')}, {p_completo.get('bairro', '')}, Boa Saúde - RN")
+                maps_url = f"https://www.google.com/maps/dir/?api=1&destination={end_q}"
             c_btn1, c_btn2 = st.columns(2)
             with c_btn1:
                 if st.button("Abrir O.S. de reparo", type="primary", use_container_width=True):

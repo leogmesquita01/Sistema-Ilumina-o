@@ -8,7 +8,7 @@ def renderizar_tela_cadastrar():
         <div class="page-header">
             <div>
                 <h1 class="page-title">Cadastrar poste em campo</h1>
-                <p class="page-subtitle">Registro individual de ativo de iluminação pública georreferenciado na malha de Boa Saúde / RN.</p>
+                <p class="page-subtitle">Registro individual de ativo de iluminação pública na malha de Boa Saúde / RN.</p>
             </div>
             <div class="page-meta">
                 <span>Destino: <span class="mono" style="color: #ffffff;">Supabase · public.postes</span></span>
@@ -21,38 +21,36 @@ def renderizar_tela_cadastrar():
 
     with st.form("form_cadastrar_poste"):
         st.markdown(
-            '<div style="font-size: 15px; font-weight: 600; color: #ffffff; margin-bottom: 12px;">Identificação e coordenadas</div>',
+            '<div style="font-size: 15px; font-weight: 600; color: #ffffff; margin-bottom: 12px;">Identificação e localização</div>',
             unsafe_allow_html=True,
         )
         c1, c2 = st.columns(2)
         with c1:
             codigo = st.text_input("Código da plaqueta COSERN", placeholder="Ex: CSR-1099")
             logradouro = st.text_input("Logradouro / Rua", placeholder="Ex: Rua Manoel Cirilo")
+
+        with c2:
             bairro = st.text_input("Bairro ou comunidade rural", value="Centro")
             referencia = st.text_input("Ponto de referência", placeholder="Ex: Em frente à UBS")
 
-        with c2:
-            lat = st.number_input("Latitude (graus decimais)", value=-6.161100, format="%.6f")
-            lng = st.number_input("Longitude (graus decimais)", value=-35.602500, format="%.6f")
-            luminaria = st.selectbox(
-                "Tecnologia da luminária",
-                ["LED", "Vapor de Sódio", "Vapor de Mercúrio", "Sem Luminária"],
-            )
-            potencia = st.number_input("Potência nominal (Watts)", value=100, step=10)
-
         st.markdown(
             '<div style="height: 1px; background: #1b1a1f; margin: 16px 0;"></div>'
-            '<div style="font-size: 15px; font-weight: 600; color: #ffffff; margin-bottom: 12px;">Estrutura física</div>',
+            '<div style="font-size: 15px; font-weight: 600; color: #ffffff; margin-bottom: 12px;">Luminária e estrutura física</div>',
             unsafe_allow_html=True,
         )
 
         c3, c4 = st.columns(2)
         with c3:
+            luminaria = st.selectbox(
+                "Tecnologia da luminária",
+                ["LED", "Vapor de Sódio", "Vapor de Mercúrio", "Sem Luminária"],
+            )
             tipo_poste = st.selectbox(
                 "Tipo de estrutura",
                 ["Concreto Duplo T", "Concreto Circular", "Madeira Tratada", "Metálico"],
             )
         with c4:
+            potencia = st.number_input("Potência nominal (Watts)", value=100, step=10)
             tipo_braco = st.selectbox(
                 "Tipo de braço",
                 ["Braço Médio 2m", "Braço Curto 1m", "Braço Longo 3m", "Pétala Dupla", "Topo de Poste"],
@@ -73,8 +71,6 @@ def renderizar_tela_cadastrar():
         try:
             cadastrar_poste({
                 "codigo": codigo,
-                "latitude": lat,
-                "longitude": lng,
                 "logradouro": logradouro,
                 "bairro": bairro,
                 "referencia": referencia,
@@ -93,7 +89,7 @@ def renderizar_tela_cadastrar():
                             Poste <span class="mono" style="font-weight: 600;">{codigo.strip()}</span> cadastrado com sucesso no Supabase.
                         </span>
                     </div>
-                    <span class="mono" style="font-size: 12px; color: #8a8c92;">{lat:.5f}, {lng:.5f}</span>
+                    <span style="font-size: 12px; color: #8a8c92;">{logradouro or 'Não informado'} · {bairro}</span>
                 </div>
                 """,
                 unsafe_allow_html=True,

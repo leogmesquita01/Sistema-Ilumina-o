@@ -62,16 +62,9 @@ def import_poles_file(file_bytes: bytes, filename: str) -> Dict[str, Any]:
 
     col_map = identify_columns(list(df.columns))
 
-    if "codigo" not in col_map or "latitude" not in col_map or "longitude" not in col_map:
-        missing = []
-        if "codigo" not in col_map:
-            missing.append("Código/Plaqueta")
-        if "latitude" not in col_map:
-            missing.append("Latitude")
-        if "longitude" not in col_map:
-            missing.append("Longitude")
+    if "codigo" not in col_map:
         raise ValueError(
-            f"Não foi possível identificar as colunas obrigatórias: {', '.join(missing)}. Colunas encontradas: {list(df.columns)}"
+            f"Não foi possível identificar a coluna obrigatória de Código/Plaqueta. Colunas encontradas: {list(df.columns)}"
         )
 
     total_linhas = len(df)
@@ -87,8 +80,18 @@ def import_poles_file(file_bytes: bytes, filename: str) -> Dict[str, Any]:
                 continue
             codigo = str(raw_code).strip()
 
-            lat = clean_coordinate(row[col_map["latitude"]])
-            lng = clean_coordinate(row[col_map["longitude"]])
+            lat = -6.1611
+            lng = -35.6025
+            if "latitude" in col_map and not pd.isna(row[col_map["latitude"]]):
+                try:
+                    lat = clean_coordinate(row[col_map["latitude"]])
+                except Exception:
+                    lat = -6.1611
+            if "longitude" in col_map and not pd.isna(row[col_map["longitude"]]):
+                try:
+                    lng = clean_coordinate(row[col_map["longitude"]])
+                except Exception:
+                    lng = -35.6025
 
             logradouro = str(row[col_map["logradouro"]]).strip() if "logradouro" in col_map and not pd.isna(row[col_map["logradouro"]]) else "Não informado"
             bairro = str(row[col_map["bairro"]]).strip() if "bairro" in col_map and not pd.isna(row[col_map["bairro"]]) else "Centro"

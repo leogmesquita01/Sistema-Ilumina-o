@@ -32,7 +32,7 @@ def renderizar_tela_importar():
                     <span class="panel-meta">.xlsx · .xls · .csv</span>
                 </div>
                 <div style="font-size: 13px; color: #8a8c92; margin-bottom: 8px;">
-                    O importador reconhece cabeçalhos variados e atualiza automaticamente postes já existentes pelo código da plaqueta.
+                    O importador reconhece cabeçalhos variados e atualiza automaticamente postes já existentes pelo código da plaqueta, sem exigir coordenadas.
                 </div>
             </div>
             """,
@@ -92,8 +92,6 @@ def renderizar_tela_importar():
     with c2:
         dados_exemplo = {
             "CODIGO_POSTE": ["CSR-2001", "CSR-2002", "CSR-2003"],
-            "LATITUDE": [-6.1615, -6.1620, -6.1628],
-            "LONGITUDE": [-35.6022, -35.6031, -35.6040],
             "LOGRADOURO": ["Rua Principal", "Travessa São Pedro", "Av. Brasil"],
             "BAIRRO": ["Centro", "Centro", "Bela Vista"],
             "REFERENCIA": ["Ao lado do colégio", "Próximo à praça", "Em frente ao posto"],
@@ -128,16 +126,16 @@ def renderizar_tela_importar():
                             <td class="mono" style="font-size: 11.5px; color: #8a8c92;">CODIGO, PLAQUETA, PONNOT</td>
                         </tr>
                         <tr>
-                            <td>Coordenadas <span style="color: #e5566f;">*</span></td>
-                            <td class="mono" style="font-size: 11.5px; color: #8a8c92;">LATITUDE, LONGITUDE, X, Y</td>
-                        </tr>
-                        <tr>
                             <td>Localização</td>
-                            <td class="mono" style="font-size: 11.5px; color: #8a8c92;">LOGRADOURO, RUA, BAIRRO</td>
+                            <td class="mono" style="font-size: 11.5px; color: #8a8c92;">LOGRADOURO, RUA, BAIRRO, REF</td>
                         </tr>
                         <tr>
                             <td>Equipamento</td>
                             <td class="mono" style="font-size: 11.5px; color: #8a8c92;">TIPO_LUMINARIA, POTENCIA</td>
+                        </tr>
+                        <tr>
+                            <td>Estrutura</td>
+                            <td class="mono" style="font-size: 11.5px; color: #8a8c92;">TIPO_POSTE, TIPO_BRACO</td>
                         </tr>
                     </tbody>
                 </table>

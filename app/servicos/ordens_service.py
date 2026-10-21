@@ -172,12 +172,16 @@ def gerar_mensagem_whatsapp(
     defeito: str,
     prioridade: str,
     luminaria: str,
-    latitude: float,
-    longitude: float,
-    materiais: List[Dict[str, Any]]
+    latitude: Optional[float] = None,
+    longitude: Optional[float] = None,
+    materiais: List[Dict[str, Any]] = None
 ) -> str:
-    materiais_str = "\n".join([f"  • {m.get('quantidade', 1)}x {m.get('item', '')}" for m in materiais]) if materiais else "  • Conforme vistoria no local"
-    maps_link = f"https://www.google.com/maps/dir/?api=1&destination={latitude},{longitude}"
+    materiais_str = "\n".join([f"  • {m.get('quantidade', 1)}x {m.get('item', '')}" for m in (materiais or [])]) if materiais else "  • Conforme vistoria no local"
+    if latitude and longitude and (round(float(latitude), 4) != -6.1611 or round(float(longitude), 4) != -35.6025):
+        maps_link = f"https://www.google.com/maps/dir/?api=1&destination={latitude},{longitude}"
+    else:
+        destino_end = urllib.parse.quote(f"{logradouro}, {bairro}, Boa Saúde - RN")
+        maps_link = f"https://www.google.com/maps/dir/?api=1&destination={destino_end}"
 
     texto = (
         f"🚨 *ORDEM DE SERVIÇO DE ILUMINAÇÃO PÚBLICA*\n"

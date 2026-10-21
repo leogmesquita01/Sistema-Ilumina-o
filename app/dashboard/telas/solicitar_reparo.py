@@ -72,7 +72,7 @@ def renderizar_tela_solicitar_reparo():
                     {pill_status}
                 </div>
                 <div style="font-size: 13px; color: #8a8c92; margin-top: 4px;">
-                    {poste['logradouro']} · {poste['bairro']} · <span class="mono">{poste['latitude']:.5f}, {poste['longitude']:.5f}</span>
+                    {poste['logradouro']} · {poste['bairro']}{f" · {poste['referencia']}" if poste.get('referencia') else ""}
                 </div>
             </div>
             <div style="text-align: right;">
