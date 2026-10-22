@@ -96,14 +96,15 @@ def renderizar_tela_ordens_servico():
             )
             escolha = st.selectbox("Status da ordem", list(mapa_filtro.keys()), key="os_status_sidebar")
             filtro_status = mapa_filtro[escolha]
+
+            termo = st.text_input(
+                "Buscar O.S. ou poste",
+                placeholder="OS-2026, P-01, rua...",
+                key="os_termo_sidebar",
+            )
     else:
         filtro_status = "Todos"
-
-        termo = st.text_input(
-            "Buscar O.S. ou poste",
-            placeholder="OS-2026, P-01, rua...",
-            key="os_termo_sidebar",
-        )
+        termo = ""
 
     ordens = listar_ordens(filtro_status=filtro_status)
     if termo and termo.strip():
