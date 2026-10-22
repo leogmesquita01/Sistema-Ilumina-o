@@ -257,42 +257,76 @@ div.st-key-nav_mobile_wrap div[data-testid="stRadio"] label:has(input:checked) [
 }
 
 @media (max-width: 768px) {
-    /* Gaveta mobile: fundo sólido e rolagem própria; o Streamlit controla abrir/fechar */
+    /* Gaveta mobile mantendo o visual de ilhas flutuantes:
+       a sidebar continua transparente e não captura toques (pointer-events: none);
+       apenas as ilhas recebem toques. Tocar no espaço entre elas atinge o conteúdo
+       principal, e o Streamlit fecha a gaveta. */
     section[data-testid="stSidebar"],
     section.stSidebar,
     [data-testid="stSidebar"] {
-        background: #080D14 !important;
-        background-color: #080D14 !important;
-        padding: 10px 10px 14px 10px !important;
-    }
-
-    section[data-testid="stSidebar"][aria-expanded="true"] {
-        box-shadow: 12px 0 40px rgba(0, 0, 0, 0.6) !important;
-    }
-
-    section[data-testid="stSidebar"][aria-expanded="false"] {
+        background: transparent !important;
+        background-color: transparent !important;
         box-shadow: none !important;
+        padding: 12px 10px 14px 12px !important;
         pointer-events: none !important;
     }
 
     section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
         height: 100% !important;
         overflow-y: auto !important;
+        scrollbar-width: none !important;
     }
 
-    /* Mostra o cabeçalho nativo apenas com o botão de fechar */
+    section[data-testid="stSidebar"] [data-testid="stSidebarContent"]::-webkit-scrollbar {
+        display: none !important;
+    }
+
+    section[data-testid="stSidebar"][aria-expanded="true"] [data-testid="stSidebarHeader"],
+    section[data-testid="stSidebar"][aria-expanded="true"] [data-testid="stSidebarUserContent"] [data-testid="stVerticalBlock"] > div {
+        pointer-events: auto !important;
+    }
+
+    section[data-testid="stSidebar"][aria-expanded="true"] [data-testid="stSidebarContent"] {
+        background: transparent !important;
+    }
+
+    /* Ilhas um pouco mais destacadas sobre o conteúdo no mobile */
+    div.st-key-sb_card_expanded {
+        box-shadow: 0 22px 50px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+    }
+
+    /* Cabeçalho nativo vira uma pequena ilha com o botão de fechar */
     section[data-testid="stSidebar"] [data-testid="stSidebarHeader"] {
         display: flex !important;
         justify-content: flex-end !important;
         align-items: center !important;
-        height: 36px !important;
-        min-height: 36px !important;
-        margin: 0 0 6px 0 !important;
+        height: 40px !important;
+        min-height: 40px !important;
+        margin: 0 0 8px 0 !important;
+        background: transparent !important;
     }
 
     [data-testid="stSidebarCollapseButton"] {
         display: inline-flex !important;
         visibility: visible !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 40px !important;
+        height: 40px !important;
+        margin: 0 !important;
+        border-radius: 50% !important;
+        background: #0D1522 !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45) !important;
+        line-height: 1 !important;
+    }
+
+    [data-testid="stSidebarCollapseButton"] button {
+        width: 100% !important;
+        height: 100% !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
     }
 
     /* "Recolher barra" (modo trilho) não faz sentido no mobile */
