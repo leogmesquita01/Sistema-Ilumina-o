@@ -1,4 +1,7 @@
 CSS_SIDEBAR = """
+/* =========================================================
+   COMPACT VERTICAL SIDEBAR ISLAND (DESKTOP)
+   ========================================================= */
 section[data-testid="stSidebar"],
 section.stSidebar,
 [data-testid="stSidebar"] {
@@ -9,10 +12,20 @@ section.stSidebar,
     box-shadow: none !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    padding: 14px 10px 14px 14px !important;
+    padding: 14px 8px 14px 14px !important;
     box-sizing: border-box !important;
     overflow: visible !important;
     z-index: 100 !important;
+    width: 240px !important;
+    min-width: 240px !important;
+    max-width: 240px !important;
+}
+
+section[data-testid="stSidebar"][aria-expanded="false"] {
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+    padding: 0 !important;
 }
 
 section[data-testid="stSidebar"]::before,
@@ -26,7 +39,7 @@ section[data-testid="stSidebar"]::after {
 section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
     background: #0D1522 !important;
     border: 1px solid rgba(255, 255, 255, 0.07) !important;
-    border-radius: 26px !important;
+    border-radius: 24px !important;
     height: calc(100vh - 28px) !important;
     max-height: calc(100vh - 28px) !important;
     box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
@@ -51,13 +64,13 @@ section[data-testid="stSidebar"] [data-testid="stSidebarHeader"] {
 }
 
 section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {
-    padding: 1.4rem 1.15rem !important;
+    padding: 1.15rem 0.9rem !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
     height: 100% !important;
     display: flex !important;
     flex-direction: column !important;
-    border-radius: 26px !important;
+    border-radius: 24px !important;
 }
 
 [data-testid="stSidebarCollapseButton"] {
@@ -66,19 +79,19 @@ section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {
     opacity: 1 !important;
     pointer-events: auto !important;
     position: absolute !important;
-    right: -13px !important;
-    top: 26px !important;
+    right: -12px !important;
+    top: 24px !important;
     z-index: 999999 !important;
-    width: 26px !important;
-    height: 26px !important;
+    width: 24px !important;
+    height: 24px !important;
 }
 
 [data-testid="stSidebarCollapseButton"] button {
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    width: 26px !important;
-    height: 26px !important;
+    width: 24px !important;
+    height: 24px !important;
     border-radius: 50% !important;
     background-color: #131F31 !important;
     border: 1px solid rgba(255, 255, 255, 0.14) !important;
@@ -94,7 +107,7 @@ section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {
 }
 
 [data-testid="stSidebarCollapseButton"] button * {
-    font-size: 13px !important;
+    font-size: 12px !important;
     color: #F8FAFC !important;
     fill: #F8FAFC !important;
 }
@@ -104,12 +117,12 @@ section[data-testid="stSidebar"] div[data-testid="stRadio"] [data-testid="stWidg
 }
 
 section[data-testid="stSidebar"] div[data-testid="stRadio"] > div[role="radiogroup"] {
-    gap: 6px !important;
+    gap: 4px !important;
     display: flex !important;
     flex-direction: column !important;
     background: rgba(8, 13, 20, 0.55) !important;
-    padding: 6px !important;
-    border-radius: 16px !important;
+    padding: 5px !important;
+    border-radius: 14px !important;
     border: 1px solid rgba(255, 255, 255, 0.05) !important;
 }
 
@@ -121,24 +134,24 @@ section[data-testid="stSidebar"] div[data-testid="stRadio"] label {
     width: 100% !important;
     background: transparent !important;
     border: 1px solid transparent !important;
-    border-radius: 12px !important;
-    padding: 10px 13px !important;
+    border-radius: 10px !important;
+    padding: 8px 10px !important;
     margin: 0 !important;
     cursor: pointer !important;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    transition: all 0.18s ease !important;
     display: flex !important;
     align-items: center !important;
 }
 
 section[data-testid="stSidebar"] div[data-testid="stRadio"] label p {
     font-family: 'Plus Jakarta Sans', sans-serif !important;
-    font-size: 0.88rem !important;
+    font-size: 0.82rem !important;
     font-weight: 500 !important;
     color: #94A3B8 !important;
     margin: 0 !important;
     display: flex !important;
     align-items: center !important;
-    gap: 10px !important;
+    gap: 8px !important;
     transition: color 0.18s ease !important;
 }
 
@@ -153,7 +166,7 @@ section[data-testid="stSidebar"] div[data-testid="stRadio"] label:hover p {
 section[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked) {
     background: #172336 !important;
     border: 1px solid rgba(16, 185, 129, 0.35) !important;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
 }
 
 section[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked) p {
@@ -166,18 +179,85 @@ section[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:chec
 }
 
 /* =========================================================
-   MOBILE TOPBAR & CAPSULE NAVIGATION (HIDDEN ON DESKTOP)
+   HORIZONTAL TOP CAPSULE NAVIGATION (DESKTOP & MOBILE)
    ========================================================= */
 .v14-mobile-topbar {
     display: none;
 }
 
 div.st-key-nav_mobile_wrap {
+    display: flex !important;
+    justify-content: center;
+    margin-bottom: 18px !important;
+}
+
+div.st-key-nav_mobile_wrap div[data-testid="stRadio"] [data-testid="stWidgetLabel"] {
     display: none !important;
 }
 
+div.st-key-nav_mobile_wrap div[data-testid="stRadio"] > div[role="radiogroup"] {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    gap: 6px !important;
+    background: #0D1522 !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 999px !important;
+    padding: 5px 6px !important;
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.32) !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+div.st-key-nav_mobile_wrap div[data-testid="stRadio"] > div[role="radiogroup"]::-webkit-scrollbar {
+    display: none !important;
+}
+
+div.st-key-nav_mobile_wrap div[data-testid="stRadio"] div[role="radiogroup"] label > div:first-child {
+    display: none !important;
+}
+
+div.st-key-nav_mobile_wrap div[data-testid="stRadio"] label {
+    flex: 0 0 auto !important;
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    border-radius: 999px !important;
+    padding: 7px 15px !important;
+    margin: 0 !important;
+    cursor: pointer !important;
+    transition: all 0.18s ease !important;
+}
+
+div.st-key-nav_mobile_wrap div[data-testid="stRadio"] label:hover {
+    background: rgba(255, 255, 255, 0.04) !important;
+}
+
+div.st-key-nav_mobile_wrap div[data-testid="stRadio"] label p {
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    font-size: 0.82rem !important;
+    font-weight: 600 !important;
+    color: #94A3B8 !important;
+    margin: 0 !important;
+    white-space: nowrap !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+}
+
+div.st-key-nav_mobile_wrap div[data-testid="stRadio"] label:has(input:checked) {
+    background: #10B981 !important;
+    border-color: #10B981 !important;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.32) !important;
+}
+
+div.st-key-nav_mobile_wrap div[data-testid="stRadio"] label:has(input:checked) p,
+div.st-key-nav_mobile_wrap div[data-testid="stRadio"] label:has(input:checked) [data-testid="stIconMaterial"] {
+    color: #052016 !important;
+    font-weight: 700 !important;
+}
+
 @media (max-width: 768px) {
-    /* Hide the floating desktop sidebar on mobile so it doesn't cover the screen */
     section[data-testid="stSidebar"],
     [data-testid="stSidebarCollapsedControl"],
     [data-testid="collapsedControl"] {
@@ -201,65 +281,14 @@ div.st-key-nav_mobile_wrap {
         margin-bottom: 14px !important;
     }
 
-    div.st-key-nav_mobile_wrap div[data-testid="stRadio"] [data-testid="stWidgetLabel"] {
-        display: none !important;
-    }
-
     div.st-key-nav_mobile_wrap div[data-testid="stRadio"] > div[role="radiogroup"] {
         display: flex !important;
-        flex-direction: row !important;
-        flex-wrap: nowrap !important;
-        overflow-x: auto !important;
-        gap: 6px !important;
-        background: #0D1522 !important;
-        border: 1px solid rgba(255, 255, 255, 0.08) !important;
         border-radius: 16px !important;
-        padding: 5px !important;
-        scrollbar-width: none !important;
-        -ms-overflow-style: none !important;
-    }
-
-    div.st-key-nav_mobile_wrap div[data-testid="stRadio"] > div[role="radiogroup"]::-webkit-scrollbar {
-        display: none !important;
-    }
-
-    div.st-key-nav_mobile_wrap div[data-testid="stRadio"] div[role="radiogroup"] label > div:first-child {
-        display: none !important;
     }
 
     div.st-key-nav_mobile_wrap div[data-testid="stRadio"] label {
-        flex: 0 0 auto !important;
-        background: transparent !important;
-        border: 1px solid transparent !important;
         border-radius: 11px !important;
         padding: 8px 12px !important;
-        margin: 0 !important;
-        cursor: pointer !important;
-        transition: all 0.18s ease !important;
-    }
-
-    div.st-key-nav_mobile_wrap div[data-testid="stRadio"] label p {
-        font-family: 'Plus Jakarta Sans', sans-serif !important;
-        font-size: 0.8rem !important;
-        font-weight: 600 !important;
-        color: #94A3B8 !important;
-        margin: 0 !important;
-        white-space: nowrap !important;
-        display: flex !important;
-        align-items: center !important;
-        gap: 6px !important;
-    }
-
-    div.st-key-nav_mobile_wrap div[data-testid="stRadio"] label:has(input:checked) {
-        background: #10B981 !important;
-        border-color: #10B981 !important;
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
-    }
-
-    div.st-key-nav_mobile_wrap div[data-testid="stRadio"] label:has(input:checked) p,
-    div.st-key-nav_mobile_wrap div[data-testid="stRadio"] label:has(input:checked) [data-testid="stIconMaterial"] {
-        color: #052016 !important;
-        font-weight: 700 !important;
     }
 }
 """
