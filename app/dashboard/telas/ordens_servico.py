@@ -1,5 +1,6 @@
 import streamlit as st
 from app.servicos.ordens_service import listar_ordens, concluir_ordem_servico, gerar_mensagem_whatsapp
+from app.fuso import para_local
 
 
 def renderizar_tela_ordens_servico():
@@ -154,7 +155,8 @@ def renderizar_tela_ordens_servico():
         else:
             chips_html = '<span class="mat-chip">Vistoria técnica no local</span>'
 
-        data_abertura = str(os_item.get("data_abertura", ""))[:10] or "—"
+        dt_abertura = para_local(os_item.get("data_abertura"))
+        data_abertura = dt_abertura.strftime("%Y-%m-%d") if dt_abertura else (str(os_item.get("data_abertura", ""))[:10] or "—")
 
         card_os_html = (
             '<div class="panel-card" style="margin-bottom: 12px; padding: 18px 22px;">'

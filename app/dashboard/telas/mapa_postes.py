@@ -4,6 +4,7 @@ from collections import Counter
 import streamlit as st
 from app.servicos.dados_postes import listar_postes, obter_resumo_indicadores, obter_poste_por_codigo
 from app.dashboard.telas.componentes_mapa import status_pill_html, renderizar_mapa_folium
+from app.fuso import agora_local
 
 
 def _renderizar_overview(stats: dict, todos_postes_base: list) -> tuple[int, int, int]:
@@ -112,7 +113,7 @@ def _renderizar_overview(stats: dict, todos_postes_base: list) -> tuple[int, int
 
 
 def renderizar_tela_mapa() -> None:
-    agora = datetime.datetime.now()
+    agora = agora_local()
     hora_atual = agora.strftime("%H:%M")
     saudacao = "Bom dia" if agora.hour < 12 else ("Boa tarde" if agora.hour < 18 else "Boa noite")
 
