@@ -1,5 +1,87 @@
+import folium
 import streamlit as st
-from app.servicos.dados_postes import cadastrar_poste, listar_postes
+from streamlit_folium import st_folium
+
+from app.servicos.dados_postes import COORDENADA_PADRAO, cadastrar_poste, listar_postes
+
+_URL_ESRI = (
+    "https://server.arcgisonline.com/ArcGIS/rest/services/"
+    "World_Imagery/MapServer/tile/{z}/{y}/{x}"
+)
+_ZOOM_CADASTRO = 15
+
+
+def _mapa_escolha_localizacao():
+    """Mapa clicável do cadastro. Devolve o ponto escolhido ou ``None``.
+
+    A marcação é opcional: quem não quiser (ou não souber) clicar segue com o
+    cadastro normal, e o poste entra na fila de "Localização pendente".
+    """
+    ponto = st.session_state.get("cad_ponto")
+    centro = [ponto["lat"], ponto["lng"]] if ponto else list(COORDENADA_PADRAO)
+
+    mapa = folium.Map(location=centro, zoom_start=_ZOOM_CADASTRO, tiles=None, control_scale=True)
+    folium.TileLayer(tiles=_URL_ESRI, attr="Esri World Imagery", name="Satélite (Esri)", show=True).add_to(mapa)
+    folium.TileLayer(tiles="OpenStreetMap", name="Mapa de ruas", show=False).add_to(mapa)
+    folium.LayerControl(position="topright", collapsed=True).add_to(mapa)
+
+    if ponto:
+        folium.Marker(
+            [ponto["lat"], ponto["lng"]],
+            tooltip="Poste marcado",
+            icon=folium.Icon(color="green", icon="ok-sign", prefix="fa"),
+        ).add_to(mapa)
+
+    resultado = st_folium(
+        mapa,
+        key="mapa_cadastro",
+        height=390,
+        use_container_width=True,
+        returned_objects=["last_clicked"],
+    )
+
+    clique = (resultado or {}).get("last_clicked") if isinstance(resultado, dict) else None
+    if clique:
+        marca = (round(float(clique["lat"]), 7), round(float(clique["lng"]), 7))
+        if st.session_state.get("cad_ultimo_clique") != marca:
+            st.session_state["cad_ultimo_clique"] = marca
+            st.session_state["cad_ponto"] = {"lat": marca[0], "lng": marca[1]}
+            st.rerun()
+
+    return st.session_state.get("cad_ponto")
+
+
+def _painel_localizacao(ponto) -> None:
+    if not ponto:
+        st.markdown(
+            '<div class="panel-card" style="padding: 12px 16px; margin-top: 10px; border-style: dashed;">'
+            '<div style="font-size: 0.8rem; color: #94A3B8; line-height: 1.45;">'
+            '<strong style="color: #FBBF24;">Sem marcação</strong> — o poste será salvo como '
+            '<strong style="color: #F8FAFC;">localização pendente</strong> e não aparecerá no mapa '
+            'até ser localizado na tela "Localizar".'
+            '</div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+        return
+
+    st.markdown(
+        '<div class="panel-card" style="padding: 12px 16px; margin-top: 10px; border-color: rgba(16, 185, 129, 0.4);">'
+        '<div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">'
+        '<div>'
+        '<div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: #34D399; font-weight: 700;">Ponto marcado</div>'
+        f'<div class="mono" style="font-size: 0.85rem; color: #FFFFFF; font-weight: 700;">{ponto["lat"]:.6f}, {ponto["lng"]:.6f}</div>'
+        '</div>'
+        '<span class="status-pill positive">● Será gravado</span>'
+        '</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+    if st.button("Remover marcação", use_container_width=True, key="cad_limpar_ponto"):
+        st.session_state.pop("cad_ponto", None)
+        st.session_state.pop("cad_ultimo_clique", None)
+        st.rerun()
 
 
 def renderizar_tela_cadastrar():
@@ -45,7 +127,7 @@ def renderizar_tela_cadastrar():
                     Inventário Municipal · Base Própria
                 </div>
                 <h1 class="hero-title">Cadastrar Poste em Campo</h1>
-                <p class="hero-subtitle">Registro rápido de ativo de iluminação pública sem necessidade de coordenadas GPS.</p>
+                <p class="hero-subtitle">Preencha a ficha e, se puder, marque o ponto no mapa ao lado. Sem marcação o poste é salvo como localização pendente.</p>
             </div>
             <div class="hero-right">
                 <div style="font-size: 0.72rem; color: #64748B; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700;">Base Sincronizada</div>
@@ -57,59 +139,95 @@ def renderizar_tela_cadastrar():
         unsafe_allow_html=True,
     )
 
-    with st.form("form_cadastrar_poste"):
-        st.markdown(
-            """
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-                <span class="status-pill positive">Localização</span>
-                <span style="font-family: 'Outfit', sans-serif; font-size: 1.05rem; font-weight: 700; color: #FFFFFF;">Identificação e Endereço</span>
-            </div>
-            """,
-            unsafe_allow_html=True,
+    aviso = st.session_state.pop("cad_aviso", None)
+    if aviso:
+        pill_loc = (
+            '<span class="status-pill positive">Localização gravada</span>'
+            if aviso["tem_localizacao"]
+            else '<span class="status-pill warning">Localização pendente</span>'
         )
-        c1, c2 = st.columns(2)
-        with c1:
-            codigo = st.text_input("Código / Identificação do poste", placeholder="Ex: P-01, Posto-02, RuaA-05...")
-            logradouro = st.text_input("Logradouro / Rua", placeholder="Ex: Rua Manoel Cirilo")
-
-        with c2:
-            bairro = st.text_input("Bairro ou comunidade rural", value=bairro_padrao)
-            referencia = st.text_input("Ponto de referência", placeholder="Ex: Em frente à UBS / Próximo à praça")
-
         st.markdown(
-            """
-            <div style="height: 1px; background: rgba(255, 255, 255, 0.08); margin: 18px 0;"></div>
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-                <span class="status-pill neutral">Especificação</span>
-                <span style="font-family: 'Outfit', sans-serif; font-size: 1.05rem; font-weight: 700; color: #FFFFFF;">Luminária e Estrutura Física</span>
-            </div>
-            """,
+            '<div class="panel-card" style="border-color: #10B981; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">'
+            '<div>'
+            '<span class="status-pill positive">Ativo Registrado</span>'
+            f'<span style="font-size: 0.9rem; color: #FFFFFF; margin-left: 10px;">Poste '
+            f'<span class="mono" style="font-weight: 700; color: #34D399;">{aviso["codigo"]}</span> gravado.</span>'
+            '</div>'
+            '<div style="display: flex; gap: 8px; align-items: center;">'
+            f'{pill_loc}'
+            f'<span style="font-size: 0.82rem; color: #94A3B8;">{aviso["logradouro"]} · {aviso["bairro"]}</span>'
+            '</div>'
+            '</div>',
             unsafe_allow_html=True,
         )
 
-        c3, c4 = st.columns(2)
-        with c3:
-            luminaria = st.selectbox(
-                "Tecnologia da luminária",
-                ["LED", "Vapor de Sódio", "Vapor de Mercúrio", "Sem Luminária"],
+    col_form, col_mapa = st.columns([1.15, 1], gap="medium")
+
+    with col_form:
+        with st.form("form_cadastrar_poste"):
+            st.markdown(
+                """
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                    <span class="status-pill positive">Identificação</span>
+                    <span style="font-family: 'Outfit', sans-serif; font-size: 1.05rem; font-weight: 700; color: #FFFFFF;">Endereço e Referência</span>
+                </div>
+                """,
+                unsafe_allow_html=True,
             )
-            tipo_poste = st.selectbox(
-                "Tipo de estrutura",
-                ["Concreto Duplo T", "Concreto Circular", "Madeira Tratada", "Metálico"],
-            )
-        with c4:
-            potencia = st.number_input("Potência nominal (Watts)", value=int(potencia_padrao), step=10)
-            tipo_braco = st.selectbox(
-                "Tipo de braço",
-                ["Braço Médio 2m", "Braço Curto 1m", "Braço Longo 3m", "Pétala Dupla", "Topo de Poste"],
+            c1, c2 = st.columns(2)
+            with c1:
+                codigo = st.text_input("Código / Identificação do poste", placeholder="Ex: P-01, Posto-02, RuaA-05...")
+                logradouro = st.text_input("Logradouro / Rua", placeholder="Ex: Rua Manoel Cirilo")
+
+            with c2:
+                bairro = st.text_input("Bairro ou comunidade rural", value=bairro_padrao)
+                referencia = st.text_input("Ponto de referência", placeholder="Ex: Em frente à UBS / Próximo à praça")
+
+            st.markdown(
+                """
+                <div style="height: 1px; background: rgba(255, 255, 255, 0.08); margin: 18px 0;"></div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                    <span class="status-pill neutral">Especificação</span>
+                    <span style="font-family: 'Outfit', sans-serif; font-size: 1.05rem; font-weight: 700; color: #FFFFFF;">Luminária e Estrutura Física</span>
+                </div>
+                """,
+                unsafe_allow_html=True,
             )
 
-        observacoes = st.text_area(
-            "Observações técnicas",
-            placeholder="Condição do relé fotoelétrico, presença de transformador, estado da fiação...",
+            c3, c4 = st.columns(2)
+            with c3:
+                luminaria = st.selectbox(
+                    "Tecnologia da luminária",
+                    ["LED", "Vapor de Sódio", "Vapor de Mercúrio", "Sem Luminária"],
+                )
+                tipo_poste = st.selectbox(
+                    "Tipo de estrutura",
+                    ["Concreto Duplo T", "Concreto Circular", "Madeira Tratada", "Metálico"],
+                )
+            with c4:
+                potencia = st.number_input("Potência nominal (Watts)", value=int(potencia_padrao), step=10)
+                tipo_braco = st.selectbox(
+                    "Tipo de braço",
+                    ["Braço Médio 2m", "Braço Curto 1m", "Braço Longo 3m", "Pétala Dupla", "Topo de Poste"],
+                )
+
+            observacoes = st.text_area(
+                "Observações técnicas",
+                placeholder="Condição do relé fotoelétrico, presença de transformador, estado da fiação...",
+            )
+
+            salvar = st.form_submit_button("Registrar Poste na Base", type="primary", use_container_width=True)
+
+    with col_mapa:
+        st.markdown(
+            '<div style="display: flex; justify-content: space-between; align-items: center; background: #0F1724; border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 11px 16px; margin-bottom: 10px;">'
+            '<span style="font-size: 0.82rem; font-weight: 700; color: #F8FAFC;">Onde está o poste?</span>'
+            '<span style="font-size: 0.72rem; color: #94A3B8;">Clique no satélite</span>'
+            '</div>',
+            unsafe_allow_html=True,
         )
-
-        salvar = st.form_submit_button("Registrar Poste na Base", type="primary", use_container_width=True)
+        ponto = _mapa_escolha_localizacao()
+        _painel_localizacao(ponto)
 
     if salvar:
         if not codigo or not codigo.strip():
@@ -127,20 +245,22 @@ def renderizar_tela_cadastrar():
                 "tipo_poste": tipo_poste,
                 "tipo_braco": tipo_braco,
                 "observacoes": observacoes,
+                "latitude": ponto["lat"] if ponto else None,
+                "longitude": ponto["lng"] if ponto else None,
             })
-            st.markdown(
-                f"""
-                <div class="panel-card" style="border-color: #10B981; margin-top: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-                    <div>
-                        <span class="status-pill positive">Ativo Registrado</span>
-                        <span style="font-size: 0.9rem; color: #FFFFFF; margin-left: 10px;">
-                            Poste <span class="mono" style="font-weight: 700; color: #34D399;">{codigo.strip()}</span> gravado com sucesso no banco de dados.
-                        </span>
-                    </div>
-                    <span style="font-size: 0.82rem; color: #94A3B8;">{logradouro or 'Não informado'} · {bairro}</span>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
         except Exception as e:
-            st.error(f"Erro ao cadastrar poste: {str(e)}")
+            if "duplicate" in str(e).lower():
+                st.error(f"Já existe um poste com o código {codigo.strip()}. Use outro código ou edite o existente.")
+            else:
+                st.error(f"Erro ao cadastrar poste: {str(e)}")
+            return
+
+        st.session_state["cad_aviso"] = {
+            "codigo": codigo.strip(),
+            "tem_localizacao": bool(ponto),
+            "logradouro": logradouro or "Não informado",
+            "bairro": bairro or "Centro",
+        }
+        st.session_state.pop("cad_ponto", None)
+        st.session_state.pop("cad_ultimo_clique", None)
+        st.rerun()

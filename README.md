@@ -78,7 +78,8 @@ aplicadas uma vez no **SQL Editor** do painel Supabase.
    * Botão de localização GPS em tempo real para o fiscal ou eletricista se localizar pelo celular.
 
 7. **Localização dos Postes (Georreferenciamento):**
-   * Tela de escritório para o coordenador: escolhe o poste na fila, acha o ponto na imagem de satélite e clica para gravar a coordenada.
+   * **No cadastro:** mapa de satélite ao lado do formulário — clique no poste e a coordenada é gravada junto com a ficha. A marcação é opcional.
+   * **Na tela "Localizar":** fila dos postes já cadastrados para corrigir ou completar a localização, um por vez.
    * Postes sem coordenada confiável ficam marcados como **"Localização pendente"** e **não aparecem no mapa** — em vez de serem empilhados no centro da cidade.
    * O cadastro em campo não exige GPS: anotar o código continua sendo suficiente, e a localização é resolvida depois no escritório.
 
