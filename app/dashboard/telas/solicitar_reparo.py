@@ -67,6 +67,7 @@ def renderizar_tela_solicitar_reparo():
         else:
             pill_status = '<span class="status-pill positive">Operacional</span>'
 
+        ref_txt = f" · {poste['referencia']}" if poste.get("referencia") else ""
         card_poste_html = (
             '<div class="panel-card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; border-color: rgba(16, 185, 129, 0.28);">'
             '<div>'
@@ -75,7 +76,7 @@ def renderizar_tela_solicitar_reparo():
             f'{pill_status}'
             '</div>'
             '<div style="font-size: 0.88rem; color: #94A3B8; margin-top: 4px;">'
-            f'{poste["logradouro"]} · <strong style="color: #E2E8F0;">{poste["bairro"]}</strong>{f" · {poste[\'referencia\']}" if poste.get("referencia") else ""}'
+            f'{poste["logradouro"]} · <strong style="color: #E2E8F0;">{poste["bairro"]}</strong>{ref_txt}'
             '</div>'
             '</div>'
             '<div style="display: flex; gap: 12px;">'
