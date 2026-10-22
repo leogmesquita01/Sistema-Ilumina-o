@@ -70,21 +70,35 @@ with st.sidebar:
         ":material/upload_file: Importar planilha",
     ]
 
-    pagina_selecionada = st.session_state.get("pagina_atual", menu_opcoes[0])
+    if "pagina_atual" not in st.session_state:
+        st.session_state["pagina_atual"] = menu_opcoes[0]
+
     mapa_antigo = {
         ":material/map: Mapa e Postes": menu_opcoes[0],
         ":material/upload_file: Importar base COSERN": menu_opcoes[4],
     }
-    pagina_selecionada = mapa_antigo.get(pagina_selecionada, pagina_selecionada)
-    idx_padrao = menu_opcoes.index(pagina_selecionada) if pagina_selecionada in menu_opcoes else 0
+    st.session_state["pagina_atual"] = mapa_antigo.get(
+        st.session_state["pagina_atual"], st.session_state["pagina_atual"]
+    )
+    if st.session_state["pagina_atual"] not in menu_opcoes:
+        st.session_state["pagina_atual"] = menu_opcoes[0]
 
-    menu = st.radio(
-        "Navegação",
+    st.session_state["nav_desktop"] = st.session_state["pagina_atual"]
+    st.session_state["nav_mobile"] = st.session_state["pagina_atual"]
+
+    def _ao_mudar_desktop() -> None:
+        st.session_state["pagina_atual"] = st.session_state["nav_desktop"]
+
+    def _ao_mudar_mobile() -> None:
+        st.session_state["pagina_atual"] = st.session_state["nav_mobile"]
+
+    st.radio(
+        "Navegação Desktop",
         menu_opcoes,
-        index=idx_padrao,
+        key="nav_desktop",
+        on_change=_ao_mudar_desktop,
         label_visibility="collapsed",
     )
-    st.session_state["pagina_atual"] = menu
 
     st.markdown(
         '<div style="height: 1px; background: rgba(255, 255, 255, 0.07); margin: 1.3rem 0 1.1rem 0;"></div>',
@@ -133,13 +147,44 @@ with st.sidebar:
     )
     st.markdown(perfil_html, unsafe_allow_html=True)
 
-if menu == ":material/map: Mapa e postes":
+mobile_topbar_html = (
+    '<div class="v14-mobile-topbar">'
+    '<div style="display: flex; align-items: center; gap: 10px;">'
+    '<div style="width: 32px; height: 32px; border-radius: 10px; background: rgba(16, 185, 129, 0.2); border: 1.5px solid #10B981; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">'
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M5 5h14M7 9h10M9 13h6"/></svg>'
+    '</div>'
+    '<div>'
+    '<div style="font-family: \'Outfit\', sans-serif; font-size: 0.98rem; font-weight: 800; color: #FFFFFF; line-height: 1.1;">Ilumina <span style="color: #10B981;">Boa Saúde</span></div>'
+    '<div style="font-size: 0.65rem; color: #94A3B8;">Infraestrutura Municipal</div>'
+    '</div>'
+    '</div>'
+    '<div style="display: flex; align-items: center; gap: 8px;">'
+    f'<span class="mono" style="font-size: 0.72rem; color: #34D399; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.28); padding: 3px 9px; border-radius: 999px; font-weight: 700;">{total_postes} postes &bull; {taxa_led}% LED</span>'
+    '<div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(16, 185, 129, 0.16); border: 1px solid rgba(16, 185, 129, 0.35); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.68rem; color: #34D399;">LM</div>'
+    '</div>'
+    '</div>'
+)
+st.markdown(mobile_topbar_html, unsafe_allow_html=True)
+
+with st.container(key="nav_mobile_wrap"):
+    st.radio(
+        "Navegação Mobile",
+        menu_opcoes,
+        key="nav_mobile",
+        on_change=_ao_mudar_mobile,
+        horizontal=True,
+        label_visibility="collapsed",
+    )
+
+pagina_ativa = st.session_state["pagina_atual"]
+
+if pagina_ativa == ":material/map: Mapa e postes":
     renderizar_tela_mapa()
-elif menu == ":material/handyman: Solicitar reparo":
+elif pagina_ativa == ":material/handyman: Solicitar reparo":
     renderizar_tela_solicitar_reparo()
-elif menu == ":material/assignment: Ordens de serviço":
+elif pagina_ativa == ":material/assignment: Ordens de serviço":
     renderizar_tela_ordens_servico()
-elif menu == ":material/add_location_alt: Cadastrar poste":
+elif pagina_ativa == ":material/add_location_alt: Cadastrar poste":
     renderizar_tela_cadastrar()
-elif menu == ":material/upload_file: Importar planilha":
+elif pagina_ativa == ":material/upload_file: Importar planilha":
     renderizar_tela_importar()
