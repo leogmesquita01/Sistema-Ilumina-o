@@ -77,6 +77,11 @@ aplicadas uma vez no **SQL Editor** do painel Supabase.
 6. **GPS em Campo:**
    * Botão de localização GPS em tempo real para o fiscal ou eletricista se localizar pelo celular.
 
+7. **Localização dos Postes (Georreferenciamento):**
+   * Tela de escritório para o coordenador: escolhe o poste na fila, acha o ponto na imagem de satélite e clica para gravar a coordenada.
+   * Postes sem coordenada confiável ficam marcados como **"Localização pendente"** e **não aparecem no mapa** — em vez de serem empilhados no centro da cidade.
+   * O cadastro em campo não exige GPS: anotar o código continua sendo suficiente, e a localização é resolvida depois no escritório.
+
 ---
 
 ## 📁 Estrutura do Projeto
@@ -100,15 +105,18 @@ Web App Mapa/
 │   │       ├── solicitar_reparo.py  # Emissão de O.S. e despacho WhatsApp
 │   │       ├── ordens_servico.py    # Gestão e conclusão de chamados
 │   │       ├── importar_base.py     # Upload e importação de planilhas
-│   │       └── cadastrar_poste.py   # Cadastro avulso de postes
+│   │       ├── cadastrar_poste.py   # Cadastro avulso de postes
+│   │       └── localizacao_postes.py # Georreferenciamento no mapa de satélite
 │   │
 │   ├── database/
-│   │   └── conexao.py        # Conexão Supabase Cloud + fallback SQLite
+│   │   ├── conexao.py        # Conexão Supabase Cloud + fallback SQLite
+│   │   └── paginacao.py      # Paginação das consultas ao PostgREST
 │   │
 │   ├── servicos/
 │   │   ├── dados_postes.py   # Consultas, métricas e cadastro de postes
 │   │   └── ordens_service.py # Gestão de O.S. e formatação de WhatsApp
 │   │
+│   ├── cache.py              # Cache TTL em memória, invalidado nas escritas
 │   ├── importer.py           # Leitura e mapeamento de planilhas Excel/CSV
 │   └── fuso.py               # Datas no fuso de Boa Saúde/RN (America/Fortaleza)
 │

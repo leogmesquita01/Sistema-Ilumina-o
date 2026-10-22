@@ -4,6 +4,25 @@ from app.cache import cache_ttl, limpar_cache
 from app.database.conexao import obter_conexao, obter_supabase, obter_supabase_admin
 from app.database.paginacao import buscar_todas_paginas
 
+# Centro de Boa Saúde/RN. Usado quando o cadastro não informa coordenadas.
+COORDENADA_PADRAO = (-6.1611, -35.6025)
+
+
+def localizacao_pendente(poste: Dict[str, Any]) -> bool:
+    """True quando o poste não tem coordenada confiável.
+
+    Conta como pendente a coordenada ausente (``null``) e também a coordenada
+    padrão: o cadastro antigo gravava esse ponto fixo para todo poste novo, o que
+    empilhava a base inteira no centro da cidade.
+    """
+    lat, lng = poste.get("latitude"), poste.get("longitude")
+    if lat is None or lng is None:
+        return True
+    arredondado = (round(float(lat), 4), round(float(lng), 4))
+    padrao = (round(COORDENADA_PADRAO[0], 4), round(COORDENADA_PADRAO[1], 4))
+    return arredondado == padrao
+
+
 
 @cache_ttl()
 def obter_resumo_indicadores() -> Dict[str, Any]:
@@ -185,8 +204,8 @@ def cadastrar_poste(dados: Dict[str, Any]) -> bool:
     lng_val = dados.get("longitude")
     novo_poste = {
         "codigo": dados["codigo"].strip(),
-        "latitude": float(lat_val) if lat_val is not None else -6.1611,
-        "longitude": float(lng_val) if lng_val is not None else -35.6025,
+        "latitude": float(lat_val) if lat_val is not None else COORDENADA_PADRAO[0],
+        "longitude": float(lng_val) if lng_val is not None else COORDENADA_PADRAO[1],
         "logradouro": dados.get("logradouro") or "Não informado",
         "bairro": dados.get("bairro") or "Centro",
         "referencia": dados.get("referencia") or "",
@@ -244,6 +263,36 @@ def atualizar_status_poste(codigo: str, status: str):
     conn = obter_conexao()
     cursor = conn.cursor()
     cursor.execute("UPDATE postes SET status = ?, data_atualizacao = CURRENT_TIMESTAMP WHERE codigo = ?;", (status, codigo))
+    conn.commit()
+    conn.close()
+    limpar_cache()
+
+
+def definir_localizacao_poste(codigo: str, latitude: float, longitude: float) -> None:
+    """Grava as coordenadas de um poste já cadastrado.
+
+    Usado pela tela de georreferenciamento (escritório): o coordenador clica no
+    mapa de satélite e a coordenada medida substitui a estimada.
+    """
+    lat = float(latitude)
+    lng = float(longitude)
+
+    sb = obter_supabase_admin()
+    if sb:
+        sb.table("postes").update({
+            "latitude": lat,
+            "longitude": lng,
+            "data_atualizacao": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        }).eq("codigo", codigo).execute()
+        limpar_cache()
+        return
+
+    conn = obter_conexao()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE postes SET latitude = ?, longitude = ?, data_atualizacao = CURRENT_TIMESTAMP WHERE codigo = ?;",
+        (lat, lng, codigo),
+    )
     conn.commit()
     conn.close()
     limpar_cache()

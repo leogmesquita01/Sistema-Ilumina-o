@@ -3,6 +3,8 @@ from folium import plugins
 import streamlit as st
 import streamlit.components.v1 as components
 
+from app.servicos.dados_postes import localizacao_pendente
+
 
 def status_pill_html(status: str) -> str:
     if status in ("urgente", "defeito_urgente"):
@@ -13,10 +15,22 @@ def status_pill_html(status: str) -> str:
 
 
 def renderizar_mapa_folium(postes: list, centro_mapa: list, zoom_inicial: int, camada_padrao: str) -> None:
+    # Postes sem coordenada confiável não entram no mapa: desenhá-los no ponto
+    # padrão empilharia a base no centro da cidade, mostrando uma precisão que
+    # não existe. Eles aparecem na tela "Localizar postes".
+    postes_mapeaveis = [p for p in postes if not localizacao_pendente(p)]
+    sem_localizacao = len(postes) - len(postes_mapeaveis)
+    aviso_sem_local = (
+        f'<span style="display: inline-flex; align-items: center; gap: 5px; color: #FBBF24;">'
+        f'<span style="width: 8px; height: 8px; border-radius: 50%; background: #F59E0B; opacity: 0.5;"></span>'
+        f'{sem_localizacao} sem localização</span>'
+    ) if sem_localizacao else ""
+
     st.markdown(
         '<div style="display: flex; justify-content: space-between; align-items: center; background: #0F1724; border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 11px 18px; margin-bottom: 10px;">'
         '<span style="font-size: 0.82rem; font-weight: 700; color: #F8FAFC;">Geolocalização &bull; Boa Saúde / RN</span>'
         '<div style="display: flex; gap: 14px; font-size: 0.75rem; color: #94A3B8;">'
+        f'{aviso_sem_local}'
         '<span style="display: inline-flex; align-items: center; gap: 5px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #10B981;"></span>Operacional</span>'
         '<span style="display: inline-flex; align-items: center; gap: 5px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #F59E0B;"></span>Chamado</span>'
         '<span style="display: inline-flex; align-items: center; gap: 5px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #F43F5E;"></span>Urgente</span>'
@@ -70,7 +84,7 @@ def renderizar_mapa_folium(postes: list, centro_mapa: list, zoom_inicial: int, c
 
     cluster = plugins.MarkerCluster(name="Postes").add_to(m)
 
-    for p in postes:
+    for p in postes_mapeaveis:
         status = p["status"]
         cor = "green"
         icone = "bolt"

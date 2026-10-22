@@ -2,7 +2,12 @@ import datetime
 import urllib.parse
 from collections import Counter
 import streamlit as st
-from app.servicos.dados_postes import listar_postes, obter_resumo_indicadores, obter_poste_por_codigo
+from app.servicos.dados_postes import (
+    listar_postes,
+    obter_resumo_indicadores,
+    obter_poste_por_codigo,
+    localizacao_pendente,
+)
 from app.dashboard.telas.componentes_mapa import status_pill_html, renderizar_mapa_folium
 from app.fuso import agora_local
 
@@ -151,6 +156,25 @@ def renderizar_tela_mapa() -> None:
     todos_postes_base = listar_postes()
     operacionais, taxa_disponibilidade, taxa_os = _renderizar_overview(stats, todos_postes_base)
 
+    pendentes_localizacao = [p for p in todos_postes_base if localizacao_pendente(p)]
+    if pendentes_localizacao:
+        col_aviso, col_acao = st.columns([4.2, 1], gap="small")
+        with col_aviso:
+            st.markdown(
+                '<div class="panel-card" style="padding: 12px 16px; border-color: rgba(245, 158, 11, 0.35); margin-bottom: 0;">'
+                '<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">'
+                '<span class="status-pill warning">● Localização pendente</span>'
+                f'<span style="font-size: 0.84rem; color: #E2E8F0;"><strong>{len(pendentes_localizacao)}</strong> poste(s) sem coordenada confiável '
+                'não aparecem no mapa até serem localizados.</span>'
+                '</div>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+        with col_acao:
+            if st.button("Localizar postes", use_container_width=True):
+                st.session_state["pagina_atual"] = ":material/edit_location: Localizar postes"
+                st.rerun()
+
     opcoes_status = {
         "Todos os status": "Todos",
         "Operacional (normal)": "normal",
@@ -222,8 +246,13 @@ def renderizar_tela_mapa() -> None:
 
     col_mapa, col_detalhes = st.columns([3, 2], gap="medium")
 
-    centro_mapa = [poste_focado["latitude"], poste_focado["longitude"]] if poste_focado else [-6.1611, -35.6025]
-    zoom_inicial = 18 if poste_focado else 15
+    # Poste com localização pendente não deve "puxar" o zoom para o centro da
+    # cidade: a coordenada dele ainda não significa nada.
+    poste_localizavel = poste_focado is not None and not localizacao_pendente(poste_focado)
+    centro_mapa = (
+        [poste_focado["latitude"], poste_focado["longitude"]] if poste_localizavel else [-6.1611, -35.6025]
+    )
+    zoom_inicial = 18 if poste_localizavel else 15
 
     with col_mapa:
         renderizar_mapa_folium(postes, centro_mapa, zoom_inicial, camada_padrao)

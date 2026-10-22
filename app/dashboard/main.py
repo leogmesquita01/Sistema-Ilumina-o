@@ -15,6 +15,7 @@ from app.dashboard.telas.solicitar_reparo import renderizar_tela_solicitar_repar
 from app.dashboard.telas.ordens_servico import renderizar_tela_ordens_servico
 from app.dashboard.telas.importar_base import renderizar_tela_importar
 from app.dashboard.telas.cadastrar_poste import renderizar_tela_cadastrar
+from app.dashboard.telas.localizacao_postes import renderizar_tela_localizacao
 
 st.set_page_config(
     page_title="Ilumina Boa Saúde",
@@ -48,6 +49,7 @@ menu_opcoes = [
     ":material/assignment: Ordens de serviço",
     ":material/add_location_alt: Cadastrar poste",
     ":material/upload_file: Importar planilha",
+    ":material/edit_location: Localizar postes",
 ]
 
 if "pagina_atual" not in st.session_state:
@@ -200,6 +202,8 @@ elif pagina_ativa == ":material/add_location_alt: Cadastrar poste":
     renderizar_tela_cadastrar()
 elif pagina_ativa == ":material/upload_file: Importar planilha":
     renderizar_tela_importar()
+elif pagina_ativa == ":material/edit_location: Localizar postes":
+    renderizar_tela_localizacao()
 
 if not sidebar_reduzida and st.session_state.get("sb_card") is not None:
     with st.session_state["sb_card"]:
