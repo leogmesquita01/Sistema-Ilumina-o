@@ -69,16 +69,28 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .block-container {
-    padding-top: 1.5rem !important;
-    padding-bottom: 3rem !important;
-    padding-left: 2.2rem !important;
-    padding-right: 2.2rem !important;
-    max-width: 1440px !important;
+    padding-top: 0.9rem !important;
+    padding-bottom: 2.5rem !important;
+    padding-left: 1.15rem !important;
+    padding-right: 1.5rem !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
 }
 
 header[data-testid="stHeader"] {
     background: transparent !important;
     pointer-events: none;
+    height: 0 !important;
+    min-height: 0 !important;
+}
+
+@media (min-width: 769px) {
+    [data-testid="stExpandSidebarButton"],
+    [data-testid="collapsedControl"] {
+        display: none !important;
+        visibility: hidden !important;
+    }
 }
 
 #MainMenu,

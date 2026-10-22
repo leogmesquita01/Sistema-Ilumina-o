@@ -71,31 +71,54 @@ def _ao_mudar_topo() -> None:
 
 
 with st.sidebar:
-    logo_html = (
-        '<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; padding: 2px;">'
-        '<div style="width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.28), rgba(14, 165, 233, 0.08)); border: 1.5px solid #10B981; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 16px rgba(16, 185, 129, 0.25); flex-shrink: 0;">'
-        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'
-        '<path d="M12 2v20M5 5h14M7 9h10M9 13h6"/>'
+    sidebar_top_html = (
+        '<div class="v14-brand-pill">'
+        '<div class="v14-brand-icon">'
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#052016" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'
+        '<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>'
         '</svg>'
         '</div>'
-        '<div>'
-        '<div style="font-family: \'Outfit\', sans-serif; font-size: 1.02rem; font-weight: 800; letter-spacing: -0.3px; color: #FFFFFF; line-height: 1.1;">'
-        'Ilumina <span style="color: #10B981;">Boa Saúde</span>'
+        '<span class="v14-brand-text">Ilumina <span style="color: #10B981;">Boa Saúde</span></span>'
         '</div>'
-        '<div style="font-size: 9.5px; color: #94A3B8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">'
-        'Painel da Tela'
+        '<div class="v14-collapsed-rail" title="Clique para expandir os controles da tela">'
+        '<div class="v14-rail-mini">'
+        '<div class="v14-rail-btn subtle">'
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>'
+        '</div>'
+        '<div class="v14-rail-btn" style="color: #10B981;">'
+        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
         '</div>'
         '</div>'
+        '<div class="v14-rail-capsule">'
+        '<div class="v14-rail-btn active">'
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>'
         '</div>'
-        '<div style="height: 1px; background: rgba(255, 255, 255, 0.06); margin-bottom: 0.9rem;"></div>'
+        '<div class="v14-rail-btn">'
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'
+        '</div>'
+        '<div class="v14-rail-btn">'
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>'
+        '</div>'
+        '<div class="v14-rail-btn">'
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>'
+        '</div>'
+        '<div class="v14-rail-btn">'
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>'
+        '</div>'
+        '<div class="v14-rail-btn">'
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>'
+        '</div>'
+        '<div style="width: 30px; height: 30px; border-radius: 50%; background: rgba(16, 185, 129, 0.16); border: 1px solid rgba(16, 185, 129, 0.35); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.66rem; color: #34D399; margin-top: 2px;">LM</div>'
+        '</div>'
+        '</div>'
     )
-    st.markdown(logo_html, unsafe_allow_html=True)
+    st.markdown(sidebar_top_html, unsafe_allow_html=True)
 
 mobile_topbar_html = (
     '<div class="v14-mobile-topbar">'
     '<div style="display: flex; align-items: center; gap: 10px;">'
-    '<div style="width: 32px; height: 32px; border-radius: 10px; background: rgba(16, 185, 129, 0.2); border: 1.5px solid #10B981; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">'
-    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M5 5h14M7 9h10M9 13h6"/></svg>'
+    '<div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #10B981, #059669); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">'
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#052016" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>'
     '</div>'
     '<div>'
     '<div style="font-family: \'Outfit\', sans-serif; font-size: 0.98rem; font-weight: 800; color: #FFFFFF; line-height: 1.1;">Ilumina <span style="color: #10B981;">Boa Saúde</span></div>'
@@ -134,9 +157,6 @@ elif pagina_ativa == ":material/upload_file: Importar planilha":
     renderizar_tela_importar()
 
 with st.sidebar:
-    total_os = os_abertas + os_concluidas
-    taxa_resolucao = int(round((os_concluidas / total_os) * 100)) if total_os > 0 else 100
-
     rodape_sidebar_html = (
         '<div style="margin-top: auto; padding-top: 0.8rem;">'
         '<div style="background: #0A101A; border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 14px; padding: 10px 12px; margin-bottom: 0.7rem;">'
