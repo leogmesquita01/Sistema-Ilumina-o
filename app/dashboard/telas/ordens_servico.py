@@ -13,79 +13,71 @@ def renderizar_tela_ordens_servico():
     pct_abertas = round((len(abertas) / total_os) * 100, 1) if total_os > 0 else 0.0
     pct_urgentes = round((len(urgentes) / len(abertas)) * 100, 1) if abertas else 0.0
 
-    st.markdown(
-        f"""
-        <div class="command-hero">
-            <div>
-                <div class="hero-badge">
-                    <span class="hero-dot"></span>
-                    Controle de Manutenção · Equipes de Rua
-                </div>
-                <h1 class="hero-title">Ordens de Serviço e Fila de Campo</h1>
-                <p class="hero-subtitle">Acompanhamento de chamados abertos, kits de peças embarcados e baixa de serviços concluídos.</p>
-            </div>
-            <div class="hero-right">
-                <div style="font-size: 0.72rem; color: #64748B; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700;">Total Histórico</div>
-                <div class="mono" style="font-size: 1.05rem; font-weight: 700; color: #10B981; margin-top: 2px;">{total_os} Ordens</div>
-                <div style="font-size: 0.75rem; color: #94A3B8; margin-top: 2px;">Boa Saúde · RN</div>
-            </div>
-        </div>
-
-        <div class="bento-kpi-grid" style="grid-template-columns: repeat(3, 1fr);">
-            <div class="bento-kpi-card">
-                <div class="bento-kpi-top">
-                    <span class="bento-kpi-label">Ordens em Aberto</span>
-                    <div class="bento-kpi-icon amber">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    </div>
-                </div>
-                <div class="bento-kpi-value">{len(abertas)}</div>
-                <div class="bento-kpi-bar">
-                    <div class="bento-kpi-bar-fill" style="width: {min(100, max(5, pct_abertas))}%; background: #F59E0B;"></div>
-                </div>
-                <div class="bento-kpi-sub">
-                    <span>Aguardando execução</span>
-                    <span class="mono" style="color: #FBBF24;">Fila ativa</span>
-                </div>
-            </div>
-
-            <div class="bento-kpi-card">
-                <div class="bento-kpi-top">
-                    <span class="bento-kpi-label">Prioridade Urgente</span>
-                    <div class="bento-kpi-icon rose">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                    </div>
-                </div>
-                <div class="bento-kpi-value" style="{'color: #FB7185;' if urgentes else ''}">{len(urgentes)}</div>
-                <div class="bento-kpi-bar">
-                    <div class="bento-kpi-bar-fill" style="width: {min(100, max(4, pct_urgentes))}%; background: #F43F5E;"></div>
-                </div>
-                <div class="bento-kpi-sub">
-                    <span>Saúde, escolas ou risco</span>
-                    <span class="mono" style="color: #FB7185;">Crítico</span>
-                </div>
-            </div>
-
-            <div class="bento-kpi-card">
-                <div class="bento-kpi-top">
-                    <span class="bento-kpi-label">Reparos Concluídos</span>
-                    <div class="bento-kpi-icon emerald">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                    </div>
-                </div>
-                <div class="bento-kpi-value">{len(concluidas)}</div>
-                <div class="bento-kpi-bar">
-                    <div class="bento-kpi-bar-fill" style="width: {taxa_conclusao}%; background: linear-gradient(90deg, #10B981, #34D399);"></div>
-                </div>
-                <div class="bento-kpi-sub">
-                    <span>Taxa de resolução</span>
-                    <span class="mono" style="color: #34D399;">{taxa_conclusao}%</span>
-                </div>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    header_os_html = (
+        '<div class="command-hero">'
+        '<div>'
+        '<div class="hero-badge"><span class="hero-dot"></span>Controle de Manutenção · Equipes de Rua</div>'
+        '<h1 class="hero-title">Ordens de Serviço e Fila de Campo</h1>'
+        '<p class="hero-subtitle">Acompanhamento de chamados abertos, kits de peças embarcados e baixa de serviços concluídos.</p>'
+        '</div>'
+        '<div class="hero-right">'
+        '<div style="font-size: 0.72rem; color: #64748B; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700;">Total Histórico</div>'
+        f'<div class="mono" style="font-size: 1.05rem; font-weight: 700; color: #10B981; margin-top: 2px;">{total_os} Ordens</div>'
+        '<div style="font-size: 0.75rem; color: #94A3B8; margin-top: 2px;">Boa Saúde · RN</div>'
+        '</div>'
+        '</div>'
+        '<div class="bento-kpi-grid" style="grid-template-columns: repeat(3, 1fr);">'
+        '<div class="bento-kpi-card">'
+        '<div class="bento-kpi-top">'
+        '<span class="bento-kpi-label">Ordens em Aberto</span>'
+        '<div class="bento-kpi-icon amber">'
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
+        '</div>'
+        '</div>'
+        f'<div class="bento-kpi-value">{len(abertas)}</div>'
+        '<div class="bento-kpi-bar">'
+        f'<div class="bento-kpi-bar-fill" style="width: {min(100, max(5, pct_abertas))}%; background: #F59E0B;"></div>'
+        '</div>'
+        '<div class="bento-kpi-sub">'
+        '<span>Aguardando execução</span>'
+        '<span class="mono" style="color: #FBBF24;">Fila ativa</span>'
+        '</div>'
+        '</div>'
+        '<div class="bento-kpi-card">'
+        '<div class="bento-kpi-top">'
+        '<span class="bento-kpi-label">Prioridade Urgente</span>'
+        '<div class="bento-kpi-icon rose">'
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+        '</div>'
+        '</div>'
+        f'<div class="bento-kpi-value" style="{"color: #FB7185;" if urgentes else ""}">{len(urgentes)}</div>'
+        '<div class="bento-kpi-bar">'
+        f'<div class="bento-kpi-bar-fill" style="width: {min(100, max(4, pct_urgentes))}%; background: #F43F5E;"></div>'
+        '</div>'
+        '<div class="bento-kpi-sub">'
+        '<span>Saúde, escolas ou risco</span>'
+        '<span class="mono" style="color: #FB7185;">Crítico</span>'
+        '</div>'
+        '</div>'
+        '<div class="bento-kpi-card">'
+        '<div class="bento-kpi-top">'
+        '<span class="bento-kpi-label">Reparos Concluídos</span>'
+        '<div class="bento-kpi-icon emerald">'
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
+        '</div>'
+        '</div>'
+        f'<div class="bento-kpi-value">{len(concluidas)}</div>'
+        '<div class="bento-kpi-bar">'
+        f'<div class="bento-kpi-bar-fill" style="width: {taxa_conclusao}%; background: linear-gradient(90deg, #10B981, #34D399);"></div>'
+        '</div>'
+        '<div class="bento-kpi-sub">'
+        '<span>Taxa de resolução</span>'
+        f'<span class="mono" style="color: #34D399;">{taxa_conclusao}%</span>'
+        '</div>'
+        '</div>'
+        '</div>'
     )
+    st.markdown(header_os_html, unsafe_allow_html=True)
 
     c_filtro, c_busca = st.columns([1.2, 2.8])
     with c_filtro:
@@ -155,32 +147,26 @@ def renderizar_tela_ordens_servico():
 
         data_abertura = str(os_item.get("data_abertura", ""))[:10] or "—"
 
-        st.markdown(
-            f"""
-            <div class="panel-card" style="margin-bottom: 12px; padding: 18px 22px;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; flex-wrap: wrap;">
-                    <div>
-                        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                            <span class="mono" style="font-size: 1rem; font-weight: 800; color: #FFFFFF;">{os_item['protocolo']}</span>
-                            <span class="mono" style="font-size: 0.85rem; font-weight: 700; color: #34D399; background: rgba(16, 185, 129, 0.12); padding: 2px 9px; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.3);">Poste {os_item['codigo_poste']}</span>
-                            <span style="font-size: 0.85rem; color: #94A3B8;">{os_item.get('logradouro', '')} · {os_item.get('bairro', '')}</span>
-                        </div>
-                        <div style="font-size: 0.95rem; color: #F8FAFC; margin-top: 10px; font-weight: 600;">
-                            {os_item['defeito']}
-                        </div>
-                        <div class="chip-group">
-                            {chips_html}
-                        </div>
-                    </div>
-                    <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
-                        {pill_status}
-                        <span class="mono" style="font-size: 0.75rem; color: #64748B;">Abertura: {data_abertura}</span>
-                    </div>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
+        card_os_html = (
+            '<div class="panel-card" style="margin-bottom: 12px; padding: 18px 22px;">'
+            '<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; flex-wrap: wrap;">'
+            '<div>'
+            '<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">'
+            f'<span class="mono" style="font-size: 1rem; font-weight: 800; color: #FFFFFF;">{os_item["protocolo"]}</span>'
+            f'<span class="mono" style="font-size: 0.85rem; font-weight: 700; color: #34D399; background: rgba(16, 185, 129, 0.12); padding: 2px 9px; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.3);">Poste {os_item["codigo_poste"]}</span>'
+            f'<span style="font-size: 0.85rem; color: #94A3B8;">{os_item.get("logradouro", "")} · {os_item.get("bairro", "")}</span>'
+            '</div>'
+            f'<div style="font-size: 0.95rem; color: #F8FAFC; margin-top: 10px; font-weight: 600;">{os_item["defeito"]}</div>'
+            f'<div class="chip-group">{chips_html}</div>'
+            '</div>'
+            '<div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">'
+            f'{pill_status}'
+            f'<span class="mono" style="font-size: 0.75rem; color: #64748B;">Abertura: {data_abertura}</span>'
+            '</div>'
+            '</div>'
+            '</div>'
         )
+        st.markdown(card_os_html, unsafe_allow_html=True)
 
         if is_aberta:
             zap_url = gerar_mensagem_whatsapp(

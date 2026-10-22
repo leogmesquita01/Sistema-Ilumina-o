@@ -69,31 +69,29 @@ def renderizar_tela_importar():
                         conteudo = arquivo.read()
                         resultado = import_poles_file(conteudo, arquivo.name)
 
-                        st.markdown(
-                            f"""
-                            <div class="panel-card" style="border-color: #10B981; margin-top: 14px;">
-                                <div class="panel-header">
-                                    <span class="panel-title">Resumo da Importação</span>
-                                    <span class="status-pill positive">Concluído</span>
-                                </div>
-                                <div class="spec-grid" style="grid-template-columns: repeat(3, 1fr);">
-                                    <div class="spec-tile">
-                                        <div class="spec-tile-label">Linhas Lidas</div>
-                                        <div class="spec-tile-val mono">{resultado['total_linhas']}</div>
-                                    </div>
-                                    <div class="spec-tile">
-                                        <div class="spec-tile-label">Salvos / Atualizados</div>
-                                        <div class="spec-tile-val mono" style="color: #34D399;">{resultado['importados']}</div>
-                                    </div>
-                                    <div class="spec-tile">
-                                        <div class="spec-tile-label">Ignorados</div>
-                                        <div class="spec-tile-val mono">{resultado['erros']}</div>
-                                    </div>
-                                </div>
-                            </div>
-                            """,
-                            unsafe_allow_html=True,
+                        resumo_html = (
+                            '<div class="panel-card" style="border-color: #10B981; margin-top: 14px;">'
+                            '<div class="panel-header">'
+                            '<span class="panel-title">Resumo da Importação</span>'
+                            '<span class="status-pill positive">Concluído</span>'
+                            '</div>'
+                            '<div class="spec-grid" style="grid-template-columns: repeat(3, 1fr);">'
+                            '<div class="spec-tile">'
+                            '<div class="spec-tile-label">Linhas Lidas</div>'
+                            f'<div class="spec-tile-val mono">{resultado["total_linhas"]}</div>'
+                            '</div>'
+                            '<div class="spec-tile">'
+                            '<div class="spec-tile-label">Salvos / Atualizados</div>'
+                            f'<div class="spec-tile-val mono" style="color: #34D399;">{resultado["importados"]}</div>'
+                            '</div>'
+                            '<div class="spec-tile">'
+                            '<div class="spec-tile-label">Ignorados</div>'
+                            f'<div class="spec-tile-val mono">{resultado["erros"]}</div>'
+                            '</div>'
+                            '</div>'
+                            '</div>'
                         )
+                        st.markdown(resumo_html, unsafe_allow_html=True)
                     except Exception as e:
                         st.error(f"Falha ao processar arquivo: {str(e)}")
 

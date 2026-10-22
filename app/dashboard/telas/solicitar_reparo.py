@@ -67,32 +67,30 @@ def renderizar_tela_solicitar_reparo():
         else:
             pill_status = '<span class="status-pill positive">Operacional</span>'
 
-        st.markdown(
-            f"""
-            <div class="panel-card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; border-color: rgba(16, 185, 129, 0.28);">
-                <div>
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <span class="mono" style="font-size: 1.25rem; font-weight: 800; color: #FFFFFF;">{poste['codigo']}</span>
-                        {pill_status}
-                    </div>
-                    <div style="font-size: 0.88rem; color: #94A3B8; margin-top: 4px;">
-                        {poste['logradouro']} · <strong style="color: #E2E8F0;">{poste['bairro']}</strong>{f" · {poste['referencia']}" if poste.get('referencia') else ""}
-                    </div>
-                </div>
-                <div style="display: flex; gap: 12px;">
-                    <div class="spec-tile" style="padding: 8px 14px;">
-                        <div class="spec-tile-label">Luminária</div>
-                        <div class="spec-tile-val">{poste['tipo_luminaria']} <span class="mono" style="color: #34D399;">{poste['potencia']}W</span></div>
-                    </div>
-                    <div class="spec-tile" style="padding: 8px 14px;">
-                        <div class="spec-tile-label">Braço / Suporte</div>
-                        <div class="spec-tile-val">{poste['tipo_braco']}</div>
-                    </div>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
+        card_poste_html = (
+            '<div class="panel-card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; border-color: rgba(16, 185, 129, 0.28);">'
+            '<div>'
+            '<div style="display: flex; align-items: center; gap: 10px;">'
+            f'<span class="mono" style="font-size: 1.25rem; font-weight: 800; color: #FFFFFF;">{poste["codigo"]}</span>'
+            f'{pill_status}'
+            '</div>'
+            '<div style="font-size: 0.88rem; color: #94A3B8; margin-top: 4px;">'
+            f'{poste["logradouro"]} · <strong style="color: #E2E8F0;">{poste["bairro"]}</strong>{f" · {poste[\'referencia\']}" if poste.get("referencia") else ""}'
+            '</div>'
+            '</div>'
+            '<div style="display: flex; gap: 12px;">'
+            '<div class="spec-tile" style="padding: 8px 14px;">'
+            '<div class="spec-tile-label">Luminária</div>'
+            f'<div class="spec-tile-val">{poste["tipo_luminaria"]} <span class="mono" style="color: #34D399;">{poste["potencia"]}W</span></div>'
+            '</div>'
+            '<div class="spec-tile" style="padding: 8px 14px;">'
+            '<div class="spec-tile-label">Braço / Suporte</div>'
+            f'<div class="spec-tile-val">{poste["tipo_braco"]}</div>'
+            '</div>'
+            '</div>'
+            '</div>'
         )
+        st.markdown(card_poste_html, unsafe_allow_html=True)
 
     with st.form("form_ordem_servico"):
         if modo_novo_poste:
