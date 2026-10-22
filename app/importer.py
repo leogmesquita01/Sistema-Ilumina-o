@@ -1,7 +1,7 @@
 import pandas as pd
 import io
 from typing import Dict, Any, List
-from app.database.conexao import obter_conexao, obter_supabase
+from app.database.conexao import obter_conexao, obter_supabase_admin
 
 COLUMN_SYNONYMS = {
     "codigo": ["codigo", "cod", "plaqueta", "barramento", "id_poste", "poste", "etiqueta", "ponto", "ponnot", "num_poste"],
@@ -127,7 +127,7 @@ def import_poles_file(file_bytes: bytes, filename: str) -> Dict[str, Any]:
             if len(detalhes_erros) < 5:
                 detalhes_erros.append(f"Linha {idx + 2}: {str(e)}")
 
-    sb = obter_supabase()
+    sb = obter_supabase_admin()
     if sb and lote_postes:
         tamanho_lote = 500
         for i in range(0, len(lote_postes), tamanho_lote):

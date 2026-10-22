@@ -2,7 +2,7 @@ from typing import List, Dict, Any, Optional
 import json
 import datetime
 import urllib.parse
-from app.database.conexao import obter_conexao, obter_supabase
+from app.database.conexao import obter_conexao, obter_supabase, obter_supabase_admin
 from app.servicos.dados_postes import atualizar_status_poste
 
 
@@ -82,7 +82,7 @@ def criar_ordem_servico(
     materiais_json = json.dumps(materiais if materiais else [])
     novo_status = "urgente" if prioridade == "Urgente" else "chamado_aberto"
 
-    sb = obter_supabase()
+    sb = obter_supabase_admin()
     if sb:
         res_count = sb.table("ordens_servico").select("id", count="exact").execute()
         total = (res_count.count or len(res_count.data or [])) + 1
@@ -127,7 +127,7 @@ def criar_ordem_servico(
 
 
 def concluir_ordem_servico(protocolo: str):
-    sb = obter_supabase()
+    sb = obter_supabase_admin()
     if sb:
         res = sb.table("ordens_servico").select("codigo_poste").eq("protocolo", protocolo).limit(1).execute()
         if not res.data:

@@ -20,7 +20,26 @@ streamlit run app/dashboard/main.py
 O aplicativo abrirá automaticamente no seu navegador em:
 - **Painel:** `http://localhost:8501`
 
+### Configuração do banco (Supabase)
+
+Crie um arquivo `.env` na raiz (use o `.env.example` como modelo) com três variáveis:
+
+| Variável | Chave | Uso |
+|---|---|---|
+| `SUPABASE_URL` | — | URL do projeto (não é segredo) |
+| `SUPABASE_KEY` | `sb_publishable_...` | **Leitura** (`anon`), sujeita ao RLS |
+| `SUPABASE_SECRET_KEY` | `sb_secret_...` | **Escrita** (`service_role`), ignora o RLS |
+
+A chave secreta é usada apenas pelo Python no servidor (`obter_supabase_admin()`) e
+nunca chega ao navegador. No Streamlit Community Cloud, cadastre as mesmas três em
+**Settings → Secrets**.
+
+A escrita anônima é bloqueada por RLS — as policies vivem em
+[`supabase/migrations/001_rls.sql`](supabase/migrations/001_rls.sql) e devem ser
+aplicadas uma vez no **SQL Editor** do painel Supabase.
+
 ---
+
 
 ## 🎯 Funcionalidades Principais
 
@@ -71,7 +90,11 @@ Web App Mapa/
 ├── app/
 │   ├── dashboard/
 │   │   ├── main.py           # Ponto de entrada principal da interface Streamlit
-│   │   ├── estilos.py        # Identidade visual moderna e Sidebar Island
+│   │   ├── estilos/          # Identidade visual em CSS modular
+│   │   │   ├── base.py       # Reset, fontes, variáveis e layout
+│   │   │   ├── sidebar.py    # Sidebar em ilhas flutuantes
+│   │   │   ├── cards.py      # KPIs, gráficos e cartões
+│   │   │   └── componentes.py # Painéis, tabelas, pills e inputs
 │   │   └── telas/
 │   │       ├── mapa_postes.py       # Mapa interativo em tempo real
 │   │       ├── solicitar_reparo.py  # Emissão de O.S. e despacho WhatsApp
@@ -87,11 +110,16 @@ Web App Mapa/
 │   │   └── ordens_service.py # Gestão de O.S. e formatação de WhatsApp
 │   │
 │   ├── importer.py           # Leitura e mapeamento de planilhas Excel/CSV
-│   └── seed_data.py          # Carga de dados iniciais de Boa Saúde/RN
+│   └── fuso.py               # Datas no fuso de Boa Saúde/RN (America/Fortaleza)
+│
+├── supabase/
+│   └── migrations/
+│       └── 001_rls.sql       # RLS: leitura pública, escrita só via chave secreta
 │
 ├── data/
 │   └── postes_boasaude.db    # Banco SQLite local de fallback
 │
+├── .env.example              # Modelo das variáveis de ambiente
 ├── requirements.txt          # Dependências do projeto
 └── README.md                 # Documentação
 ```

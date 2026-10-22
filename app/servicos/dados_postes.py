@@ -1,6 +1,6 @@
 from typing import List, Dict, Any, Optional
 import datetime
-from app.database.conexao import obter_conexao, obter_supabase
+from app.database.conexao import obter_conexao, obter_supabase, obter_supabase_admin
 
 
 def obter_resumo_indicadores() -> Dict[str, Any]:
@@ -167,7 +167,7 @@ def cadastrar_poste(dados: Dict[str, Any]) -> bool:
         "observacoes": dados.get("observacoes") or "",
     }
 
-    sb = obter_supabase()
+    sb = obter_supabase_admin()
     if sb:
         sb.table("postes").insert(novo_poste).execute()
         return True
@@ -196,7 +196,7 @@ def cadastrar_poste(dados: Dict[str, Any]) -> bool:
 
 
 def atualizar_status_poste(codigo: str, status: str):
-    sb = obter_supabase()
+    sb = obter_supabase_admin()
     if sb:
         try:
             sb.table("postes").update({
