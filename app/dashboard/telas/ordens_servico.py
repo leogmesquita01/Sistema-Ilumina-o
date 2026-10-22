@@ -79,20 +79,24 @@ def renderizar_tela_ordens_servico():
     )
     st.markdown(header_os_html, unsafe_allow_html=True)
 
-    c_filtro, c_busca = st.columns([1.2, 2.8])
-    with c_filtro:
-        mapa_filtro = {
-            "Todas as ordens": "Todos",
-            "Em aberto": "aberta",
-            "Concluídas": "concluida",
-        }
-        escolha = st.selectbox("Status da ordem", list(mapa_filtro.keys()))
+    mapa_filtro = {
+        "Todas as ordens": "Todos",
+        "Em aberto": "aberta",
+        "Concluídas": "concluida",
+    }
+
+    with st.sidebar:
+        st.markdown(
+            '<div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #34D399; margin-bottom: 8px;">Filtros da Fila</div>',
+            unsafe_allow_html=True,
+        )
+        escolha = st.selectbox("Status da ordem", list(mapa_filtro.keys()), key="os_status_sidebar")
         filtro_status = mapa_filtro[escolha]
 
-    with c_busca:
         termo = st.text_input(
-            "Filtrar por protocolo, código do poste ou endereço",
-            placeholder="Ex: OS-2026-0001, P-01, Rua Manoel Cirilo...",
+            "Buscar O.S. ou poste",
+            placeholder="OS-2026, P-01, rua...",
+            key="os_termo_sidebar",
         )
 
     ordens = listar_ordens(filtro_status=filtro_status)

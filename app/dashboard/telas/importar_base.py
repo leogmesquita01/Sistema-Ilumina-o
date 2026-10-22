@@ -5,6 +5,42 @@ from app.importer import import_poles_file
 
 
 def renderizar_tela_importar():
+    dados_exemplo = {
+        "CODIGO_POSTE": ["P-001", "P-002", "P-003"],
+        "LOGRADOURO": ["Rua Manoel Cirilo", "Travessa São Pedro", "Av. Rio Branco"],
+        "BAIRRO": ["Centro", "Centro", "Bela Vista"],
+        "REFERENCIA": ["Ao lado do colégio", "Próximo à praça", "Em frente ao posto"],
+        "TIPO_LUMINARIA": ["LED", "Vapor de Sódio", "LED"],
+        "POTENCIA_WATTS": [100, 70, 150],
+        "TIPO_POSTE": ["Concreto Duplo T", "Concreto Circular", "Concreto Duplo T"],
+        "TIPO_BRACO": ["Braço Médio 2m", "Braço Curto 1m", "Braço Longo 3m"],
+    }
+    df_exemplo = pd.DataFrame(dados_exemplo)
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+        df_exemplo.to_excel(writer, index=False, sheet_name="Postes")
+    buffer.seek(0)
+
+    with st.sidebar:
+        st.markdown(
+            '<div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #34D399; margin-bottom: 8px;">Ferramentas de Lote</div>',
+            unsafe_allow_html=True,
+        )
+        st.download_button(
+            label="Baixar Modelo (.xlsx)",
+            data=buffer,
+            file_name="modelo_postes_boasaude.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+            key="dl_modelo_sidebar",
+        )
+        st.markdown(
+            '<div style="background:#0A101A; border:1px solid rgba(255,255,255,0.06); border-radius:14px; padding:10px 12px; margin-top:8px; font-size:0.74rem; color:#94A3B8; line-height:1.45;">'
+            '<div style="color:#F8FAFC; font-weight:600; margin-bottom:4px;">Modo Upsert Ativo</div>'
+            'Códigos já existentes são atualizados sem duplicar registros.'
+            '</div>',
+            unsafe_allow_html=True,
+        )
     st.markdown(
         """
         <div class="command-hero">
@@ -96,22 +132,6 @@ def renderizar_tela_importar():
                         st.error(f"Falha ao processar arquivo: {str(e)}")
 
     with c2:
-        dados_exemplo = {
-            "CODIGO_POSTE": ["P-001", "P-002", "P-003"],
-            "LOGRADOURO": ["Rua Manoel Cirilo", "Travessa São Pedro", "Av. Rio Branco"],
-            "BAIRRO": ["Centro", "Centro", "Bela Vista"],
-            "REFERENCIA": ["Ao lado do colégio", "Próximo à praça", "Em frente ao posto"],
-            "TIPO_LUMINARIA": ["LED", "Vapor de Sódio", "LED"],
-            "POTENCIA_WATTS": [100, 70, 150],
-            "TIPO_POSTE": ["Concreto Duplo T", "Concreto Circular", "Concreto Duplo T"],
-            "TIPO_BRACO": ["Braço Médio 2m", "Braço Curto 1m", "Braço Longo 3m"],
-        }
-        df_exemplo = pd.DataFrame(dados_exemplo)
-        buffer = io.BytesIO()
-        with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-            df_exemplo.to_excel(writer, index=False, sheet_name="Postes")
-        buffer.seek(0)
-
         st.markdown(
             """
             <div class="panel-card">

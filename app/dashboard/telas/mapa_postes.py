@@ -150,25 +150,35 @@ def renderizar_tela_mapa() -> None:
     todos_postes_base = listar_postes()
     operacionais, taxa_disponibilidade, taxa_os = _renderizar_overview(stats, todos_postes_base)
 
-    col_busca, col_filtro, col_camada = st.columns([3, 1.2, 1.2])
-    with col_busca:
-        busca_termo = st.text_input(
-            "Pesquisar poste por código, rua ou comunidade",
-            placeholder="Digite o código anotado (ex: P-01), rua ou bairro...",
+    opcoes_status = {
+        "Todos os status": "Todos",
+        "Operacional (normal)": "normal",
+        "Chamado aberto": "chamado_aberto",
+        "Defeito urgente": "defeito_urgente",
+    }
+    opcoes_camada = ["Mapa de ruas", "Satélite (Esri)", "Modo noturno (Dark)"]
+
+    with st.sidebar:
+        st.markdown(
+            '<div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #34D399; margin-bottom: 8px;">Controles do Mapa</div>',
+            unsafe_allow_html=True,
         )
-    with col_filtro:
-        opcoes_status = {
-            "Todos os status": "Todos",
-            "Operacional (normal)": "normal",
-            "Chamado aberto": "chamado_aberto",
-            "Defeito urgente": "defeito_urgente",
-        }
-        escolha_status_label = st.selectbox("Filtrar por status", list(opcoes_status.keys()))
+        busca_termo = st.text_input(
+            "Pesquisar poste",
+            placeholder="Código (P-01), rua ou bairro...",
+            key="mapa_busca_sidebar",
+        )
+        escolha_status_label = st.selectbox(
+            "Filtrar por status",
+            list(opcoes_status.keys()),
+            key="mapa_status_sidebar",
+        )
         filtro_status = opcoes_status[escolha_status_label]
-    with col_camada:
+
         camada_padrao = st.selectbox(
-            "Visualização do mapa",
-            ["Mapa de ruas", "Satélite (Esri)", "Modo noturno (Dark)"],
+            "Camada do mapa",
+            opcoes_camada,
+            key="mapa_camada_sidebar",
         )
 
     postes = listar_postes(filtro_status=filtro_status, termo_busca=busca_termo)
@@ -178,29 +188,30 @@ def renderizar_tela_mapa() -> None:
         exatos = [p for p in postes if p["codigo"].lower() == busca_termo.strip().lower()]
         poste_focado = exatos[0] if exatos else (postes[0] if postes else None)
 
-    col_mapa, col_detalhes = st.columns([3, 2], gap="medium")
+    opcoes_inspecao = ["Visão geral da rede"] + [
+        f"{p['codigo']} · {p['logradouro']} ({p['bairro']})" for p in postes
+    ]
+    idx_inspecao = 0
+    if poste_focado:
+        for i, p in enumerate(postes, start=1):
+            if p["codigo"] == poste_focado["codigo"]:
+                idx_inspecao = i
+                break
 
-    with col_detalhes:
-        opcoes_inspecao = ["Visão geral da rede"] + [
-            f"{p['codigo']} · {p['logradouro']} ({p['bairro']})" for p in postes
-        ]
-        idx_inspecao = 0
-        if poste_focado:
-            for i, p in enumerate(postes, start=1):
-                if p["codigo"] == poste_focado["codigo"]:
-                    idx_inspecao = i
-                    break
-
+    with st.sidebar:
         selecao_inspecao = st.selectbox(
-            "Selecionar ativo para inspeção",
+            "Inspecionar ativo",
             options=opcoes_inspecao,
             index=idx_inspecao,
+            key="mapa_inspecao_sidebar",
         )
         if selecao_inspecao != "Visão geral da rede":
             cod_sel = selecao_inspecao.split("·")[0].strip()
             encontrados = [p for p in postes if p["codigo"] == cod_sel]
             if encontrados:
                 poste_focado = encontrados[0]
+
+    col_mapa, col_detalhes = st.columns([3, 2], gap="medium")
 
     centro_mapa = [poste_focado["latitude"], poste_focado["longitude"]] if poste_focado else [-6.1611, -35.6025]
     zoom_inicial = 18 if poste_focado else 15

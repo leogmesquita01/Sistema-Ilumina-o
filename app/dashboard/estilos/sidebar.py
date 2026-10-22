@@ -258,12 +258,6 @@ div.st-key-nav_mobile_wrap div[data-testid="stRadio"] label:has(input:checked) [
 }
 
 @media (max-width: 768px) {
-    section[data-testid="stSidebar"],
-    [data-testid="stSidebarCollapsedControl"],
-    [data-testid="collapsedControl"] {
-        display: none !important;
-    }
-
     .v14-mobile-topbar {
         display: flex !important;
         justify-content: space-between;

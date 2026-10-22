@@ -30,33 +30,50 @@ def renderizar_tela_solicitar_reparo():
     modo_novo_poste = False
     poste = None
 
-    if todos_postes:
-        opcoes_postes = {
-            f"{p['codigo']} · {p['logradouro']} ({p['bairro']})": p["codigo"] for p in todos_postes
-        }
-        opcoes_lista = list(opcoes_postes.keys()) + ["+ Informar outro poste ainda não listado"]
-
-        codigo_pre_selecionado = st.session_state.get("poste_selecionado_os")
-        indice_padrao = 0
-        if codigo_pre_selecionado:
-            for idx, (_, cod) in enumerate(opcoes_postes.items()):
-                if cod == codigo_pre_selecionado:
-                    indice_padrao = idx
-                    break
-
-        escolha_poste = st.selectbox(
-            "Selecione um poste da base ou informe um novo",
-            options=opcoes_lista,
-            index=indice_padrao,
+    with st.sidebar:
+        st.markdown(
+            '<div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #34D399; margin-bottom: 8px;">Seleção do Ativo</div>',
+            unsafe_allow_html=True,
         )
+        if todos_postes:
+            opcoes_postes = {
+                f"{p['codigo']} · {p['logradouro']} ({p['bairro']})": p["codigo"] for p in todos_postes
+            }
+            opcoes_lista = list(opcoes_postes.keys()) + ["+ Novo poste não listado"]
 
-        if escolha_poste == "+ Informar outro poste ainda não listado":
-            modo_novo_poste = True
+            codigo_pre_selecionado = st.session_state.get("poste_selecionado_os")
+            indice_padrao = 0
+            if codigo_pre_selecionado:
+                for idx, (_, cod) in enumerate(opcoes_postes.items()):
+                    if cod == codigo_pre_selecionado:
+                        indice_padrao = idx
+                        break
+
+            escolha_poste = st.selectbox(
+                "Poste para reparo",
+                options=opcoes_lista,
+                index=indice_padrao,
+                key="reparo_poste_sidebar",
+            )
+
+            if escolha_poste == "+ Novo poste não listado":
+                modo_novo_poste = True
+            else:
+                codigo_poste = opcoes_postes[escolha_poste]
+                poste = obter_poste_por_codigo(codigo_poste)
         else:
-            codigo_poste = opcoes_postes[escolha_poste]
-            poste = obter_poste_por_codigo(codigo_poste)
-    else:
-        modo_novo_poste = True
+            modo_novo_poste = True
+            st.caption("Nenhum poste cadastrado. Preencha os dados ao lado.")
+
+        if poste and not modo_novo_poste:
+            st.markdown(
+                '<div style="background: #0A101A; border: 1px solid rgba(16,185,129,0.25); border-radius: 14px; padding: 10px 12px; margin-top: 6px;">'
+                f'<div class="mono" style="font-size: 0.9rem; font-weight: 800; color: #FFFFFF;">{poste["codigo"]}</div>'
+                f'<div style="font-size: 0.74rem; color: #94A3B8; margin-top: 2px;">{poste["logradouro"]} · {poste["bairro"]}</div>'
+                f'<div class="mono" style="font-size: 0.72rem; color: #34D399; margin-top: 4px;">{poste["tipo_luminaria"]} {poste["potencia"]}W</div>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
 
     if poste and not modo_novo_poste:
         status_atual = poste.get("status", "normal")

@@ -3,7 +3,31 @@ from app.servicos.dados_postes import cadastrar_poste, listar_postes
 
 
 def renderizar_tela_cadastrar():
-    total_atual = len(listar_postes())
+    todos_postes = listar_postes()
+    total_atual = len(todos_postes)
+
+    with st.sidebar:
+        st.markdown(
+            '<div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #34D399; margin-bottom: 8px;">Padrão de Campo</div>',
+            unsafe_allow_html=True,
+        )
+        bairro_padrao = st.text_input("Bairro padrão", value="Centro", key="cad_bairro_padrao")
+        potencia_padrao = st.selectbox("Potência padrão (W)", [50, 70, 100, 150, 200], index=2, key="cad_pot_padrao")
+
+        if todos_postes:
+            ultimos_html = "".join(
+                [
+                    f'<div style="display:flex; justify-content:space-between; font-size:0.74rem; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.05);"><span class="mono" style="color:#34D399; font-weight:700;">{p["codigo"]}</span><span style="color:#94A3B8; max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{p["bairro"]}</span></div>'
+                    for p in todos_postes[-4:]
+                ]
+            )
+            st.markdown(
+                '<div style="background:#0A101A; border:1px solid rgba(255,255,255,0.06); border-radius:14px; padding:10px 12px; margin-top:8px;">'
+                '<div style="font-size:0.7rem; color:#F8FAFC; font-weight:600; margin-bottom:6px;">Últimos Cadastrados</div>'
+                f'{ultimos_html}'
+                '</div>',
+                unsafe_allow_html=True,
+            )
 
     st.markdown(
         f"""
@@ -42,7 +66,7 @@ def renderizar_tela_cadastrar():
             logradouro = st.text_input("Logradouro / Rua", placeholder="Ex: Rua Manoel Cirilo")
 
         with c2:
-            bairro = st.text_input("Bairro ou comunidade rural", value="Centro")
+            bairro = st.text_input("Bairro ou comunidade rural", value=bairro_padrao)
             referencia = st.text_input("Ponto de referência", placeholder="Ex: Em frente à UBS / Próximo à praça")
 
         st.markdown(
@@ -67,7 +91,7 @@ def renderizar_tela_cadastrar():
                 ["Concreto Duplo T", "Concreto Circular", "Madeira Tratada", "Metálico"],
             )
         with c4:
-            potencia = st.number_input("Potência nominal (Watts)", value=100, step=10)
+            potencia = st.number_input("Potência nominal (Watts)", value=int(potencia_padrao), step=10)
             tipo_braco = st.selectbox(
                 "Tipo de braço",
                 ["Braço Médio 2m", "Braço Curto 1m", "Braço Longo 3m", "Pétala Dupla", "Topo de Poste"],
