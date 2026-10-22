@@ -92,89 +92,83 @@ def renderizar_tela_mapa():
 
     potencia_total_kw = round(sum(float(p.get("potencia", 100) or 100) for p in todos_postes_base) / 1000, 1)
 
-    st.markdown(
-        f"""
-        <div class="v14-overview-grid">
-            <div class="v14-balance-card">
-                <div>
-                    <div class="v14-card-label">
-                        <span>Total de Ativos na Rede</span>
-                        <span class="v14-trend-pill">● {taxa_disponibilidade}% disponível</span>
-                    </div>
-                    <div class="v14-big-number">{total_postes:,} <span style="font-size: 1.05rem; font-weight: 500; color: #94A3B8;">postes</span></div>
-                    <div style="font-size: 0.8rem; color: #64748B;">
-                        Carga instalada estimada: <strong class="mono" style="color: #E2E8F0;">{potencia_total_kw} kW</strong>
-                    </div>
-                </div>
-                <div class="v14-action-row">
-                    <div class="v14-btn-dark">
-                        <span style="width: 7px; height: 7px; border-radius: 50%; background: #10B981;"></span>
-                        <span>{operacionais} Operacionais</span>
-                    </div>
-                    <div class="v14-btn-emerald">
-                        <span>⚡ {taxa_led}% LED</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="v14-stat-2x2">
-                <div class="v14-mini-stat featured">
-                    <div class="v14-mini-label">
-                        <span>Luminárias LED</span>
-                        <span>↗</span>
-                    </div>
-                    <div class="v14-mini-val">{total_led}</div>
-                    <div class="v14-mini-sub">{taxa_led}% da planta municipal</div>
-                </div>
-                <div class="v14-mini-stat">
-                    <div class="v14-mini-label">
-                        <span>Em Alerta</span>
-                        <span style="color: #FB7185;">●</span>
-                    </div>
-                    <div class="v14-mini-val" style="{'color: #FB7185;' if total_chamados > 0 else ''}">{total_chamados}</div>
-                    <div class="v14-mini-sub">Aguardando reparo</div>
-                </div>
-                <div class="v14-mini-stat">
-                    <div class="v14-mini-label">
-                        <span>O.S. Abertas</span>
-                        <span style="color: #FBBF24;">●</span>
-                    </div>
-                    <div class="v14-mini-val">{os_abertas}</div>
-                    <div class="v14-mini-sub">Em fila de campo</div>
-                </div>
-                <div class="v14-mini-stat">
-                    <div class="v14-mini-label">
-                        <span>Concluídas</span>
-                        <span style="color: #38BDF8;">✓</span>
-                    </div>
-                    <div class="v14-mini-val">{os_concluidas}</div>
-                    <div class="v14-mini-sub">{taxa_os}% resolução</div>
-                </div>
-            </div>
-
-            <div class="v14-chart-card">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                    <div>
-                        <div style="font-size: 0.96rem; font-weight: 700; color: #FFFFFF; font-family: 'Outfit', sans-serif;">Bairros &amp; Eficiência</div>
-                        <div style="font-size: 0.76rem; color: #64748B;">Comparativo Total vs. LED por localidade</div>
-                    </div>
-                    <div style="display: flex; gap: 10px; font-size: 0.72rem; color: #94A3B8; align-items: center;">
-                        <span style="display: inline-flex; align-items: center; gap: 4px;"><span style="width: 7px; height: 7px; border-radius: 2px; background: #1E293B;"></span>Total</span>
-                        <span style="display: inline-flex; align-items: center; gap: 4px;"><span style="width: 7px; height: 7px; border-radius: 2px; background: #10B981;"></span>LED</span>
-                    </div>
-                </div>
-                <div class="v14-bars-wrap">
-                    {colunas_barras_html}
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: #94A3B8; padding-top: 6px;">
-                    <span>Localidades mapeadas: <strong style="color: #F8FAFC;">{len(contagem_geral_bairros)}</strong></span>
-                    <span class="mono" style="color: #34D399;">Meta 100% LED</span>
-                </div>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    overview_html = (
+        '<div class="v14-overview-grid">'
+        '<div class="v14-balance-card">'
+        '<div>'
+        '<div class="v14-card-label">'
+        '<span>Total de Ativos na Rede</span>'
+        f'<span class="v14-trend-pill">● {taxa_disponibilidade}% disponível</span>'
+        '</div>'
+        f'<div class="v14-big-number">{total_postes:,} <span style="font-size: 1.05rem; font-weight: 500; color: #94A3B8;">postes</span></div>'
+        '<div style="font-size: 0.8rem; color: #64748B;">'
+        f'Carga instalada estimada: <strong class="mono" style="color: #E2E8F0;">{potencia_total_kw} kW</strong>'
+        '</div>'
+        '</div>'
+        '<div class="v14-action-row">'
+        '<div class="v14-btn-dark">'
+        '<span style="width: 7px; height: 7px; border-radius: 50%; background: #10B981;"></span>'
+        f'<span>{operacionais} Operacionais</span>'
+        '</div>'
+        '<div class="v14-btn-emerald">'
+        f'<span>⚡ {taxa_led}% LED</span>'
+        '</div>'
+        '</div>'
+        '</div>'
+        '<div class="v14-stat-2x2">'
+        '<div class="v14-mini-stat featured">'
+        '<div class="v14-mini-label">'
+        '<span>Luminárias LED</span>'
+        '<span>↗</span>'
+        '</div>'
+        f'<div class="v14-mini-val">{total_led}</div>'
+        f'<div class="v14-mini-sub">{taxa_led}% da planta municipal</div>'
+        '</div>'
+        '<div class="v14-mini-stat">'
+        '<div class="v14-mini-label">'
+        '<span>Em Alerta</span>'
+        '<span style="color: #FB7185;">●</span>'
+        '</div>'
+        f'<div class="v14-mini-val" style="{"color: #FB7185;" if total_chamados > 0 else ""}">{total_chamados}</div>'
+        '<div class="v14-mini-sub">Aguardando reparo</div>'
+        '</div>'
+        '<div class="v14-mini-stat">'
+        '<div class="v14-mini-label">'
+        '<span>O.S. Abertas</span>'
+        '<span style="color: #FBBF24;">●</span>'
+        '</div>'
+        f'<div class="v14-mini-val">{os_abertas}</div>'
+        '<div class="v14-mini-sub">Em fila de campo</div>'
+        '</div>'
+        '<div class="v14-mini-stat">'
+        '<div class="v14-mini-label">'
+        '<span>Concluídas</span>'
+        '<span style="color: #38BDF8;">✓</span>'
+        '</div>'
+        f'<div class="v14-mini-val">{os_concluidas}</div>'
+        f'<div class="v14-mini-sub">{taxa_os}% resolução</div>'
+        '</div>'
+        '</div>'
+        '<div class="v14-chart-card">'
+        '<div style="display: flex; justify-content: space-between; align-items: flex-start;">'
+        '<div>'
+        '<div style="font-size: 0.96rem; font-weight: 700; color: #FFFFFF; font-family: \'Outfit\', sans-serif;">Bairros &amp; Eficiência</div>'
+        '<div style="font-size: 0.76rem; color: #64748B;">Comparativo Total vs. LED por localidade</div>'
+        '</div>'
+        '<div style="display: flex; gap: 10px; font-size: 0.72rem; color: #94A3B8; align-items: center;">'
+        '<span style="display: inline-flex; align-items: center; gap: 4px;"><span style="width: 7px; height: 7px; border-radius: 2px; background: #1E293B;"></span>Total</span>'
+        '<span style="display: inline-flex; align-items: center; gap: 4px;"><span style="width: 7px; height: 7px; border-radius: 2px; background: #10B981;"></span>LED</span>'
+        '</div>'
+        '</div>'
+        f'<div class="v14-bars-wrap">{colunas_barras_html}</div>'
+        '<div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: #94A3B8; padding-top: 6px;">'
+        f'<span>Localidades mapeadas: <strong style="color: #F8FAFC;">{len(contagem_geral_bairros)}</strong></span>'
+        '<span class="mono" style="color: #34D399;">Meta 100% LED</span>'
+        '</div>'
+        '</div>'
+        '</div>'
     )
+    st.markdown(overview_html, unsafe_allow_html=True)
 
     col_busca, col_filtro, col_camada = st.columns([3, 1.2, 1.2])
 
@@ -343,59 +337,56 @@ def renderizar_tela_mapa():
             potencia_val = p_completo.get("potencia", 100)
             consumo_mensal_kwh = round((potencia_val * 12 * 30) / 1000, 1)
 
-            st.markdown(
-                f"""
-                <div class="v14-asset-pass">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px;">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <div style="width: 28px; height: 28px; border-radius: 8px; background: rgba(16, 185, 129, 0.2); border: 1px solid #10B981; display: flex; align-items: center; justify-content: center; color: #34D399; font-weight: 800; font-size: 0.78rem;">⚡</div>
-                            <span style="font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 0.95rem; color: #FFFFFF;">Ilumina &bull; Passaporte do Ativo</span>
-                        </div>
-                        {pill_html}
-                    </div>
-                    <div style="margin-bottom: 20px;">
-                        <div style="font-size: 0.72rem; color: #94A3B8; letter-spacing: 0.06em; text-transform: uppercase;">Identificador Oficial</div>
-                        <div class="mono" style="font-size: 1.75rem; font-weight: 800; color: #FFFFFF; letter-spacing: 0.04em; margin-top: 2px;">{p_completo['codigo']}</div>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: flex-end; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px;">
-                        <div>
-                            <div style="font-size: 0.68rem; color: #64748B; text-transform: uppercase;">Localidade</div>
-                            <div style="font-size: 0.84rem; font-weight: 600; color: #E2E8F0;">{p_completo['bairro']}</div>
-                        </div>
-                        <div style="text-align: right;">
-                            <div style="font-size: 0.68rem; color: #64748B; text-transform: uppercase;">Luminária</div>
-                            <div class="mono" style="font-size: 0.84rem; font-weight: 700; color: #34D399;">{p_completo['tipo_luminaria']} {potencia_val}W</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="panel-card">
-                    <div class="panel-header">
-                        <span class="panel-title">Parâmetros &amp; Controles do Poste</span>
-                        <span class="panel-meta">{consumo_mensal_kwh} kWh/mês</span>
-                    </div>
-                    <div class="kv-list">
-                        <div class="kv-row">
-                            <span class="kv-key">Logradouro</span>
-                            <span class="kv-val">{p_completo['logradouro']}</span>
-                        </div>
-                        <div class="kv-row">
-                            <span class="kv-key">Ponto de referência</span>
-                            <span class="kv-val">{p_completo.get('referencia') or '—'}</span>
-                        </div>
-                        <div class="kv-row">
-                            <span class="kv-key">Estrutura física</span>
-                            <span class="kv-val">{p_completo['tipo_poste']}</span>
-                        </div>
-                        <div class="kv-row">
-                            <span class="kv-key">Braço / Suporte</span>
-                            <span class="kv-val">{p_completo['tipo_braco']}</span>
-                        </div>
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
+            dossie_html = (
+                '<div class="v14-asset-pass">'
+                '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px;">'
+                '<div style="display: flex; align-items: center; gap: 8px;">'
+                '<div style="width: 28px; height: 28px; border-radius: 8px; background: rgba(16, 185, 129, 0.2); border: 1px solid #10B981; display: flex; align-items: center; justify-content: center; color: #34D399; font-weight: 800; font-size: 0.78rem;">⚡</div>'
+                '<span style="font-family: \'Outfit\', sans-serif; font-weight: 700; font-size: 0.95rem; color: #FFFFFF;">Ilumina &bull; Passaporte do Ativo</span>'
+                '</div>'
+                f'{pill_html}'
+                '</div>'
+                '<div style="margin-bottom: 20px;">'
+                '<div style="font-size: 0.72rem; color: #94A3B8; letter-spacing: 0.06em; text-transform: uppercase;">Identificador Oficial</div>'
+                f'<div class="mono" style="font-size: 1.75rem; font-weight: 800; color: #FFFFFF; letter-spacing: 0.04em; margin-top: 2px;">{p_completo["codigo"]}</div>'
+                '</div>'
+                '<div style="display: flex; justify-content: space-between; align-items: flex-end; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px;">'
+                '<div>'
+                '<div style="font-size: 0.68rem; color: #64748B; text-transform: uppercase;">Localidade</div>'
+                f'<div style="font-size: 0.84rem; font-weight: 600; color: #E2E8F0;">{p_completo["bairro"]}</div>'
+                '</div>'
+                '<div style="text-align: right;">'
+                '<div style="font-size: 0.68rem; color: #64748B; text-transform: uppercase;">Luminária</div>'
+                f'<div class="mono" style="font-size: 0.84rem; font-weight: 700; color: #34D399;">{p_completo["tipo_luminaria"]} {potencia_val}W</div>'
+                '</div>'
+                '</div>'
+                '</div>'
+                '<div class="panel-card">'
+                '<div class="panel-header">'
+                '<span class="panel-title">Parâmetros &amp; Controles do Poste</span>'
+                f'<span class="panel-meta">{consumo_mensal_kwh} kWh/mês</span>'
+                '</div>'
+                '<div class="kv-list">'
+                '<div class="kv-row">'
+                '<span class="kv-key">Logradouro</span>'
+                f'<span class="kv-val">{p_completo["logradouro"]}</span>'
+                '</div>'
+                '<div class="kv-row">'
+                '<span class="kv-key">Ponto de referência</span>'
+                f'<span class="kv-val">{p_completo.get("referencia") or "—"}</span>'
+                '</div>'
+                '<div class="kv-row">'
+                '<span class="kv-key">Estrutura física</span>'
+                f'<span class="kv-val">{p_completo["tipo_poste"]}</span>'
+                '</div>'
+                '<div class="kv-row">'
+                '<span class="kv-key">Braço / Suporte</span>'
+                f'<span class="kv-val">{p_completo["tipo_braco"]}</span>'
+                '</div>'
+                '</div>'
+                '</div>'
             )
+            st.markdown(dossie_html, unsafe_allow_html=True)
 
             if p_completo.get("observacoes"):
                 st.markdown(
@@ -424,37 +415,35 @@ def renderizar_tela_mapa():
                 st.link_button("Abrir no Google Maps", maps_url, use_container_width=True)
 
         else:
-            st.markdown(
-                f"""
-                <div class="v14-goals-grid">
-                    <div class="v14-goal-card">
-                        <div style="font-size: 0.76rem; color: #94A3B8; font-weight: 500;">Modernização LED</div>
-                        <div class="v14-ring" style="background: conic-gradient(#10B981 {taxa_led * 3.6}deg, rgba(255,255,255,0.07) 0deg);">
-                            <div class="v14-ring-inner">{taxa_led}%</div>
-                        </div>
-                        <div style="font-size: 0.8rem; font-weight: 600; color: #F8FAFC;">{total_led} de {total_postes}</div>
-                        <div style="font-size: 0.7rem; color: #64748B;">Luminárias eficientes</div>
-                    </div>
-                    <div class="v14-goal-card">
-                        <div style="font-size: 0.76rem; color: #94A3B8; font-weight: 500;">Rede Operacional</div>
-                        <div class="v14-ring" style="background: conic-gradient(#0EA5E9 {taxa_disponibilidade * 3.6}deg, rgba(255,255,255,0.07) 0deg);">
-                            <div class="v14-ring-inner">{taxa_disponibilidade}%</div>
-                        </div>
-                        <div style="font-size: 0.8rem; font-weight: 600; color: #F8FAFC;">{operacionais} ativos</div>
-                        <div style="font-size: 0.7rem; color: #64748B;">Sem falha aberta</div>
-                    </div>
-                    <div class="v14-goal-card">
-                        <div style="font-size: 0.76rem; color: #94A3B8; font-weight: 500;">Resolução O.S.</div>
-                        <div class="v14-ring" style="background: conic-gradient(#34D399 {taxa_os * 3.6}deg, rgba(255,255,255,0.07) 0deg);">
-                            <div class="v14-ring-inner">{taxa_os}%</div>
-                        </div>
-                        <div style="font-size: 0.8rem; font-weight: 600; color: #F8FAFC;">{os_concluidas} concluídas</div>
-                        <div style="font-size: 0.7rem; color: #64748B;">Atendimento de rua</div>
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
+            goals_html = (
+                '<div class="v14-goals-grid">'
+                '<div class="v14-goal-card">'
+                '<div style="font-size: 0.76rem; color: #94A3B8; font-weight: 500;">Modernização LED</div>'
+                f'<div class="v14-ring" style="background: conic-gradient(#10B981 {taxa_led * 3.6}deg, rgba(255,255,255,0.07) 0deg);">'
+                f'<div class="v14-ring-inner">{taxa_led}%</div>'
+                '</div>'
+                f'<div style="font-size: 0.8rem; font-weight: 600; color: #F8FAFC;">{total_led} de {total_postes}</div>'
+                '<div style="font-size: 0.7rem; color: #64748B;">Luminárias eficientes</div>'
+                '</div>'
+                '<div class="v14-goal-card">'
+                '<div style="font-size: 0.76rem; color: #94A3B8; font-weight: 500;">Rede Operacional</div>'
+                f'<div class="v14-ring" style="background: conic-gradient(#0EA5E9 {taxa_disponibilidade * 3.6}deg, rgba(255,255,255,0.07) 0deg);">'
+                f'<div class="v14-ring-inner">{taxa_disponibilidade}%</div>'
+                '</div>'
+                f'<div style="font-size: 0.8rem; font-weight: 600; color: #F8FAFC;">{operacionais} ativos</div>'
+                '<div style="font-size: 0.7rem; color: #64748B;">Sem falha aberta</div>'
+                '</div>'
+                '<div class="v14-goal-card">'
+                '<div style="font-size: 0.76rem; color: #94A3B8; font-weight: 500;">Resolução O.S.</div>'
+                f'<div class="v14-ring" style="background: conic-gradient(#34D399 {taxa_os * 3.6}deg, rgba(255,255,255,0.07) 0deg);">'
+                f'<div class="v14-ring-inner">{taxa_os}%</div>'
+                '</div>'
+                f'<div style="font-size: 0.8rem; font-weight: 600; color: #F8FAFC;">{os_concluidas} concluídas</div>'
+                '<div style="font-size: 0.7rem; color: #64748B;">Atendimento de rua</div>'
+                '</div>'
+                '</div>'
             )
+            st.markdown(goals_html, unsafe_allow_html=True)
 
             postes_prioritarios = sorted(
                 postes,
@@ -492,20 +481,16 @@ def renderizar_tela_mapa():
                         '</div>'
                     )
 
-                st.markdown(
-                    f"""
-                    <div class="panel-card">
-                        <div class="panel-header">
-                            <span class="panel-title">Atividades &amp; Monitoramento Recente</span>
-                            <span class="panel-meta">{len(postes)} ativos</span>
-                        </div>
-                        <div>
-                            {linhas_atividades}
-                        </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
+                ativ_card_html = (
+                    '<div class="panel-card">'
+                    '<div class="panel-header">'
+                    '<span class="panel-title">Atividades &amp; Monitoramento Recente</span>'
+                    f'<span class="panel-meta">{len(postes)} ativos</span>'
+                    '</div>'
+                    f'<div>{linhas_atividades}</div>'
+                    '</div>'
                 )
+                st.markdown(ativ_card_html, unsafe_allow_html=True)
             else:
                 st.markdown(
                     """
