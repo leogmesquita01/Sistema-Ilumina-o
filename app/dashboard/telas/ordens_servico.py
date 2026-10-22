@@ -84,14 +84,19 @@ def renderizar_tela_ordens_servico():
         "Em aberto": "aberta",
         "Concluídas": "concluida",
     }
+    sidebar_reduzida = st.session_state.get("sidebar_reduzida", False)
+    sb_target = st.session_state.get("sb_card")
 
-    with st.sidebar:
-        st.markdown(
-            '<div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #34D399; margin-bottom: 8px;">Filtros da Fila</div>',
-            unsafe_allow_html=True,
-        )
-        escolha = st.selectbox("Status da ordem", list(mapa_filtro.keys()), key="os_status_sidebar")
-        filtro_status = mapa_filtro[escolha]
+    if not sidebar_reduzida and sb_target is not None:
+        with sb_target:
+            st.markdown(
+                '<div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #34D399; margin-bottom: 8px;">Filtros da Fila</div>',
+                unsafe_allow_html=True,
+            )
+            escolha = st.selectbox("Status da ordem", list(mapa_filtro.keys()), key="os_status_sidebar")
+            filtro_status = mapa_filtro[escolha]
+    else:
+        filtro_status = "Todos"
 
         termo = st.text_input(
             "Buscar O.S. ou poste",

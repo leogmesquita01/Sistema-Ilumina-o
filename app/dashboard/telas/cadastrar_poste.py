@@ -6,28 +6,35 @@ def renderizar_tela_cadastrar():
     todos_postes = listar_postes()
     total_atual = len(todos_postes)
 
-    with st.sidebar:
-        st.markdown(
-            '<div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #34D399; margin-bottom: 8px;">Padrão de Campo</div>',
-            unsafe_allow_html=True,
-        )
-        bairro_padrao = st.text_input("Bairro padrão", value="Centro", key="cad_bairro_padrao")
-        potencia_padrao = st.selectbox("Potência padrão (W)", [50, 70, 100, 150, 200], index=2, key="cad_pot_padrao")
+    sidebar_reduzida = st.session_state.get("sidebar_reduzida", False)
+    sb_target = st.session_state.get("sb_card")
 
-        if todos_postes:
-            ultimos_html = "".join(
-                [
-                    f'<div style="display:flex; justify-content:space-between; font-size:0.74rem; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.05);"><span class="mono" style="color:#34D399; font-weight:700;">{p["codigo"]}</span><span style="color:#94A3B8; max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{p["bairro"]}</span></div>'
-                    for p in todos_postes[-4:]
-                ]
-            )
+    if not sidebar_reduzida and sb_target is not None:
+        with sb_target:
             st.markdown(
-                '<div style="background:#0A101A; border:1px solid rgba(255,255,255,0.06); border-radius:14px; padding:10px 12px; margin-top:8px;">'
-                '<div style="font-size:0.7rem; color:#F8FAFC; font-weight:600; margin-bottom:6px;">Últimos Cadastrados</div>'
-                f'{ultimos_html}'
-                '</div>',
+                '<div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #34D399; margin-bottom: 8px;">Padrão de Campo</div>',
                 unsafe_allow_html=True,
             )
+            bairro_padrao = st.text_input("Bairro padrão", value="Centro", key="cad_bairro_padrao")
+            potencia_padrao = st.selectbox("Potência padrão (W)", [50, 70, 100, 150, 200], index=2, key="cad_pot_padrao")
+
+            if todos_postes:
+                ultimos_html = "".join(
+                    [
+                        f'<div style="display:flex; justify-content:space-between; font-size:0.74rem; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.05);"><span class="mono" style="color:#34D399; font-weight:700;">{p["codigo"]}</span><span style="color:#94A3B8; max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{p["bairro"]}</span></div>'
+                        for p in todos_postes[-4:]
+                    ]
+                )
+                st.markdown(
+                    '<div style="background:#0A101A; border:1px solid rgba(255,255,255,0.06); border-radius:14px; padding:10px 12px; margin-top:8px;">'
+                    '<div style="font-size:0.7rem; color:#F8FAFC; font-weight:600; margin-bottom:6px;">Últimos Cadastrados</div>'
+                    f'{ultimos_html}'
+                    '</div>',
+                    unsafe_allow_html=True,
+                )
+    else:
+        bairro_padrao = "Centro"
+        potencia_padrao = 100
 
     st.markdown(
         f"""

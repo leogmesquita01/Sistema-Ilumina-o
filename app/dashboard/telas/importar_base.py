@@ -21,26 +21,30 @@ def renderizar_tela_importar():
         df_exemplo.to_excel(writer, index=False, sheet_name="Postes")
     buffer.seek(0)
 
-    with st.sidebar:
-        st.markdown(
-            '<div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #34D399; margin-bottom: 8px;">Ferramentas de Lote</div>',
-            unsafe_allow_html=True,
-        )
-        st.download_button(
-            label="Baixar Modelo (.xlsx)",
-            data=buffer,
-            file_name="modelo_postes_boasaude.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True,
-            key="dl_modelo_sidebar",
-        )
-        st.markdown(
-            '<div style="background:#0A101A; border:1px solid rgba(255,255,255,0.06); border-radius:14px; padding:10px 12px; margin-top:8px; font-size:0.74rem; color:#94A3B8; line-height:1.45;">'
-            '<div style="color:#F8FAFC; font-weight:600; margin-bottom:4px;">Modo Upsert Ativo</div>'
-            'Códigos já existentes são atualizados sem duplicar registros.'
-            '</div>',
-            unsafe_allow_html=True,
-        )
+    sidebar_reduzida = st.session_state.get("sidebar_reduzida", False)
+    sb_target = st.session_state.get("sb_card")
+
+    if not sidebar_reduzida and sb_target is not None:
+        with sb_target:
+            st.markdown(
+                '<div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #34D399; margin-bottom: 8px;">Ferramentas de Lote</div>',
+                unsafe_allow_html=True,
+            )
+            st.download_button(
+                label="Baixar Modelo (.xlsx)",
+                data=buffer,
+                file_name="modelo_postes_boasaude.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True,
+                key="dl_modelo_sidebar",
+            )
+            st.markdown(
+                '<div style="background:#0A101A; border:1px solid rgba(255,255,255,0.06); border-radius:14px; padding:10px 12px; margin-top:8px; font-size:0.74rem; color:#94A3B8; line-height:1.45;">'
+                '<div style="color:#F8FAFC; font-weight:600; margin-bottom:4px;">Modo Upsert Ativo</div>'
+                'Códigos já existentes são atualizados sem duplicar registros.'
+                '</div>',
+                unsafe_allow_html=True,
+            )
     st.markdown(
         """
         <div class="command-hero">

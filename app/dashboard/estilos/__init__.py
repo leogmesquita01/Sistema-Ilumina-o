@@ -1,10 +1,22 @@
+import importlib
 import streamlit as st
-from app.dashboard.estilos.base import CSS_BASE
-from app.dashboard.estilos.sidebar import CSS_SIDEBAR
-from app.dashboard.estilos.cards import CSS_CARDS
-from app.dashboard.estilos.componentes import CSS_COMPONENTES
+import app.dashboard.estilos.base as _mod_base
+import app.dashboard.estilos.sidebar as _mod_sidebar
+import app.dashboard.estilos.cards as _mod_cards
+import app.dashboard.estilos.componentes as _mod_componentes
 
 
 def aplicar_estilos() -> None:
-    css_completo = "\n".join([CSS_BASE, CSS_SIDEBAR, CSS_CARDS, CSS_COMPONENTES])
+    importlib.reload(_mod_base)
+    importlib.reload(_mod_sidebar)
+    importlib.reload(_mod_cards)
+    importlib.reload(_mod_componentes)
+    css_completo = "\n".join(
+        [
+            _mod_base.CSS_BASE,
+            _mod_sidebar.CSS_SIDEBAR,
+            _mod_cards.CSS_CARDS,
+            _mod_componentes.CSS_COMPONENTES,
+        ]
+    )
     st.markdown(f"<style>{css_completo}</style>", unsafe_allow_html=True)
