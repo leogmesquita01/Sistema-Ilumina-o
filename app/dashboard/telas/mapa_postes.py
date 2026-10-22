@@ -172,7 +172,7 @@ def renderizar_tela_mapa() -> None:
             )
         with col_acao:
             if st.button("Localizar postes", use_container_width=True):
-                st.session_state["pagina_atual"] = ":material/edit_location: Localizar postes"
+                st.session_state["pagina_atual"] = ":material/edit_location: Localizar"
                 st.rerun()
 
     opcoes_status = {

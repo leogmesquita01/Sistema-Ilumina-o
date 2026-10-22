@@ -49,7 +49,7 @@ menu_opcoes = [
     ":material/assignment: Ordens de serviço",
     ":material/add_location_alt: Cadastrar poste",
     ":material/upload_file: Importar planilha",
-    ":material/edit_location: Localizar postes",
+    ":material/edit_location: Localizar",
 ]
 
 if "pagina_atual" not in st.session_state:
@@ -202,7 +202,7 @@ elif pagina_ativa == ":material/add_location_alt: Cadastrar poste":
     renderizar_tela_cadastrar()
 elif pagina_ativa == ":material/upload_file: Importar planilha":
     renderizar_tela_importar()
-elif pagina_ativa == ":material/edit_location: Localizar postes":
+elif pagina_ativa == ":material/edit_location: Localizar":
     renderizar_tela_localizacao()
 
 if not sidebar_reduzida and st.session_state.get("sb_card") is not None:
