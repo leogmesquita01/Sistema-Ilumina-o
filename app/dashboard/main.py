@@ -92,6 +92,9 @@ if sidebar_reduzida:
         "width: 48px !important; min-width: 48px !important; max-width: 48px !important; padding: 0 !important;"
         "}"
         "}"
+        "@media (max-width: 768px) {"
+        "div.st-key-sb_toggle_wrap { display: block !important; }"
+        "}"
         "</style>",
         unsafe_allow_html=True,
     )

@@ -16,10 +16,21 @@ section.stSidebar,
     box-sizing: border-box !important;
     overflow: visible !important;
     z-index: 100 !important;
-    width: 252px !important;
-    min-width: 252px !important;
-    max-width: 252px !important;
-    transform: none !important;
+}
+
+/* Largura fixa e transform travado APENAS no desktop.
+   No mobile o Streamlit usa transform: translateX(-largura) para esconder
+   a sidebar; forçar transform: none deixava a sidebar invisível (fundo
+   transparente) por cima do conteúdo, bloqueando todos os toques. */
+@media (min-width: 769px) {
+    section[data-testid="stSidebar"],
+    section.stSidebar,
+    [data-testid="stSidebar"] {
+        width: 252px !important;
+        min-width: 252px !important;
+        max-width: 252px !important;
+        transform: none !important;
+    }
 }
 
 section[data-testid="stSidebar"]::before,
@@ -246,6 +257,72 @@ div.st-key-nav_mobile_wrap div[data-testid="stRadio"] label:has(input:checked) [
 }
 
 @media (max-width: 768px) {
+    /* Gaveta mobile: fundo sólido e rolagem própria; o Streamlit controla abrir/fechar */
+    section[data-testid="stSidebar"],
+    section.stSidebar,
+    [data-testid="stSidebar"] {
+        background: #080D14 !important;
+        background-color: #080D14 !important;
+        padding: 10px 10px 14px 10px !important;
+    }
+
+    section[data-testid="stSidebar"][aria-expanded="true"] {
+        box-shadow: 12px 0 40px rgba(0, 0, 0, 0.6) !important;
+    }
+
+    section[data-testid="stSidebar"][aria-expanded="false"] {
+        box-shadow: none !important;
+        pointer-events: none !important;
+    }
+
+    section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
+        height: 100% !important;
+        overflow-y: auto !important;
+    }
+
+    /* Mostra o cabeçalho nativo apenas com o botão de fechar */
+    section[data-testid="stSidebar"] [data-testid="stSidebarHeader"] {
+        display: flex !important;
+        justify-content: flex-end !important;
+        align-items: center !important;
+        height: 36px !important;
+        min-height: 36px !important;
+        margin: 0 0 6px 0 !important;
+    }
+
+    [data-testid="stSidebarCollapseButton"] {
+        display: inline-flex !important;
+        visibility: visible !important;
+    }
+
+    /* "Recolher barra" (modo trilho) não faz sentido no mobile */
+    div.st-key-sb_toggle_wrap {
+        display: none !important;
+    }
+
+    /* Botão flutuante para reabrir a gaveta quando ela estiver fechada */
+    [data-testid="stExpandSidebarButton"] {
+        position: fixed !important;
+        left: 14px !important;
+        bottom: 18px !important;
+        z-index: 1000020 !important;
+        pointer-events: auto !important;
+        width: 46px !important;
+        height: 46px !important;
+        border-radius: 50% !important;
+        background: #10B981 !important;
+        border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    [data-testid="stExpandSidebarButton"] [data-testid="stIconMaterial"],
+    [data-testid="stExpandSidebarButton"] span {
+        color: #052016 !important;
+    }
+
     .v14-mobile-topbar {
         display: flex !important;
         justify-content: space-between;
