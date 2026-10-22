@@ -2,19 +2,31 @@ from typing import List, Dict, Any, Optional
 import json
 import datetime
 import urllib.parse
+from app.cache import cache_ttl, limpar_cache
 from app.database.conexao import obter_conexao, obter_supabase, obter_supabase_admin
+from app.database.paginacao import buscar_todas_paginas
 from app.servicos.dados_postes import atualizar_status_poste
 
 
 def listar_ordens(filtro_status: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Lista ordens, paginando o Supabase até esgotar o resultado."""
+    return _listar_ordens_cache(filtro_status or "Todos")
+
+
+@cache_ttl()
+def _listar_ordens_cache(filtro_status: str) -> List[Dict[str, Any]]:
     sb = obter_supabase()
     if sb:
         try:
-            query = sb.table("ordens_servico").select("*, postes(logradouro, bairro, latitude, longitude, tipo_luminaria, potencia)").order("id", desc=True)
-            if filtro_status and filtro_status != "Todos":
-                query = query.eq("status", filtro_status)
-            res = query.execute()
-            rows = res.data or []
+            def criar_consulta():
+                consulta = sb.table("ordens_servico").select(
+                    "*, postes(logradouro, bairro, latitude, longitude, tipo_luminaria, potencia)"
+                ).order("id", desc=True)
+                if filtro_status and filtro_status != "Todos":
+                    consulta = consulta.eq("status", filtro_status)
+                return consulta
+
+            rows = buscar_todas_paginas(criar_consulta)
             resultado = []
             for r in rows:
                 item = dict(r)
@@ -100,6 +112,7 @@ def criar_ordem_servico(
         }).execute()
 
         atualizar_status_poste(codigo_poste, novo_status)
+        limpar_cache()
         return protocolo
 
     conn = obter_conexao()
@@ -123,6 +136,7 @@ def criar_ordem_servico(
 
     conn.commit()
     conn.close()
+    limpar_cache()
     return protocolo
 
 
@@ -139,6 +153,7 @@ def concluir_ordem_servico(protocolo: str):
             "data_conclusao": agora
         }).eq("protocolo", protocolo).execute()
         atualizar_status_poste(codigo_poste, "normal")
+        limpar_cache()
         return
 
     conn = obter_conexao()
@@ -162,6 +177,7 @@ def concluir_ordem_servico(protocolo: str):
 
     conn.commit()
     conn.close()
+    limpar_cache()
 
 
 def gerar_mensagem_whatsapp(

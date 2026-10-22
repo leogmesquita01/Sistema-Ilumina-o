@@ -1,26 +1,41 @@
 from typing import List, Dict, Any, Optional
 import datetime
+from app.cache import cache_ttl, limpar_cache
 from app.database.conexao import obter_conexao, obter_supabase, obter_supabase_admin
+from app.database.paginacao import buscar_todas_paginas
 
 
+@cache_ttl()
 def obter_resumo_indicadores() -> Dict[str, Any]:
+    """Indicadores do painel.
+
+    Usa ``count=exact`` do PostgREST em vez de baixar as tabelas inteiras: com
+    milhares de postes, contar no cliente estourava o limite de 1.000 linhas por
+    requisição e os números saíam errados (para menos), sem aviso.
+    """
     sb = obter_supabase()
     if sb:
         try:
-            res_postes = sb.table("postes").select("tipo_luminaria, status").execute()
-            postes = res_postes.data or []
-            total_postes = len(postes)
-            total_led = sum(1 for p in postes if p.get("tipo_luminaria") == "LED")
-            total_chamados = sum(
-                1 for p in postes if p.get("status") in ("chamado_aberto", "urgente", "defeito_urgente")
-            )
+            def contar(tabela: str, coluna: Optional[str] = None,
+                       valor: Optional[str] = None,
+                       valores: Optional[List[str]] = None) -> int:
+                consulta = sb.table(tabela).select("id", count="exact").limit(1)
+                if coluna and valor is not None:
+                    consulta = consulta.eq(coluna, valor)
+                if coluna and valores is not None:
+                    consulta = consulta.in_(coluna, valores)
+                return consulta.execute().count or 0
 
-            res_os = sb.table("ordens_servico").select("status").execute()
-            ordens = res_os.data or []
-            os_abertas = sum(1 for o in ordens if o.get("status") == "aberta")
-            os_concluidas = sum(1 for o in ordens if o.get("status") == "concluida")
+            total_postes = contar("postes")
+            total_led = contar("postes", "tipo_luminaria", "LED")
+            total_chamados = contar(
+                "postes", "status", valores=["chamado_aberto", "urgente", "defeito_urgente"]
+            )
+            os_abertas = contar("ordens_servico", "status", "aberta")
+            os_concluidas = contar("ordens_servico", "status", "concluida")
 
             taxa_led = round((total_led / total_postes * 100), 1) if total_postes > 0 else 0
+
             return {
                 "total_postes": total_postes,
                 "total_led": total_led,
@@ -65,17 +80,32 @@ def obter_resumo_indicadores() -> Dict[str, Any]:
 
 
 def listar_postes(filtro_status: Optional[str] = None, termo_busca: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Lista postes, paginando o Supabase até esgotar o resultado.
+
+    A normalização dos argumentos acontece antes do cache para que "sem filtro"
+    e "Todos" caiam na mesma entrada.
+    """
+    return _listar_postes_cache(filtro_status or "Todos", (termo_busca or "").strip())
+
+
+@cache_ttl()
+def _listar_postes_cache(filtro_status: str, termo_busca: str) -> List[Dict[str, Any]]:
     sb = obter_supabase()
     if sb:
         try:
-            query = sb.table("postes").select("*").order("id", desc=True)
-            if filtro_status and filtro_status != "Todos":
-                query = query.eq("status", filtro_status)
-            if termo_busca and termo_busca.strip():
-                t = termo_busca.strip()
-                query = query.or_(f"codigo.ilike.%{t}%,logradouro.ilike.%{t}%,bairro.ilike.%{t}%")
-            res = query.execute()
-            return res.data or []
+            def criar_consulta():
+                consulta = sb.table("postes").select("*").order("id", desc=True)
+                if filtro_status and filtro_status != "Todos":
+                    consulta = consulta.eq("status", filtro_status)
+                if termo_busca:
+                    # vírgula e parênteses quebrariam a sintaxe de filtro do PostgREST
+                    t = termo_busca.replace(",", " ").replace("(", " ").replace(")", " ")
+                    consulta = consulta.or_(
+                        f"codigo.ilike.%{t}%,logradouro.ilike.%{t}%,bairro.ilike.%{t}%"
+                    )
+                return consulta
+
+            return buscar_todas_paginas(criar_consulta)
         except Exception:
             pass
 
@@ -89,8 +119,8 @@ def listar_postes(filtro_status: Optional[str] = None, termo_busca: Optional[str
         query += " AND status = ?"
         params.append(filtro_status)
 
-    if termo_busca and termo_busca.strip():
-        termo = f"%{termo_busca.strip()}%"
+    if termo_busca:
+        termo = f"%{termo_busca}%"
         query += " AND (codigo LIKE ? OR logradouro LIKE ? OR bairro LIKE ?)"
         params.extend([termo, termo, termo])
 
@@ -102,6 +132,7 @@ def listar_postes(filtro_status: Optional[str] = None, termo_busca: Optional[str
     return [dict(r) for r in rows]
 
 
+@cache_ttl()
 def obter_poste_por_codigo(codigo: str) -> Optional[Dict[str, Any]]:
     if not codigo:
         return None
@@ -170,6 +201,7 @@ def cadastrar_poste(dados: Dict[str, Any]) -> bool:
     sb = obter_supabase_admin()
     if sb:
         sb.table("postes").insert(novo_poste).execute()
+        limpar_cache()
         return True
 
     conn = obter_conexao()
@@ -189,6 +221,7 @@ def cadastrar_poste(dados: Dict[str, Any]) -> bool:
         ))
         conn.commit()
         conn.close()
+        limpar_cache()
         return True
     except Exception as e:
         conn.close()
@@ -203,6 +236,7 @@ def atualizar_status_poste(codigo: str, status: str):
                 "status": status,
                 "data_atualizacao": datetime.datetime.now(datetime.timezone.utc).isoformat()
             }).eq("codigo", codigo).execute()
+            limpar_cache()
             return
         except Exception:
             pass
@@ -212,3 +246,4 @@ def atualizar_status_poste(codigo: str, status: str):
     cursor.execute("UPDATE postes SET status = ?, data_atualizacao = CURRENT_TIMESTAMP WHERE codigo = ?;", (status, codigo))
     conn.commit()
     conn.close()
+    limpar_cache()

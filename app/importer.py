@@ -1,6 +1,7 @@
 import pandas as pd
 import io
 from typing import Dict, Any, List
+from app.cache import limpar_cache
 from app.database.conexao import obter_conexao, obter_supabase_admin
 
 COLUMN_SYNONYMS = {
@@ -133,6 +134,7 @@ def import_poles_file(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         for i in range(0, len(lote_postes), tamanho_lote):
             chunk = lote_postes[i:i + tamanho_lote]
             sb.table("postes").upsert(chunk, on_conflict="codigo").execute()
+        limpar_cache()
         return {
             "sucesso": True,
             "total_linhas": total_linhas,
@@ -171,6 +173,7 @@ def import_poles_file(file_bytes: bytes, filename: str) -> Dict[str, Any]:
 
     conn.commit()
     conn.close()
+    limpar_cache()
 
     return {
         "sucesso": True,
