@@ -2,6 +2,7 @@ import folium
 import streamlit as st
 from streamlit_folium import st_folium
 
+from app.constantes import BRACOS, ESTRUTURAS, LUMINARIAS
 from app.dashboard.html_seguro import esc
 from app.servicos.dados_postes import COORDENADA_PADRAO, cadastrar_poste, codigo_duplicado, listar_postes
 
@@ -199,17 +200,17 @@ def renderizar_tela_cadastrar():
             with c3:
                 luminaria = st.selectbox(
                     "Tecnologia da luminária",
-                    ["LED", "Vapor de Sódio", "Vapor de Mercúrio", "Sem Luminária"],
+                    LUMINARIAS,
                 )
                 tipo_poste = st.selectbox(
                     "Tipo de estrutura",
-                    ["Concreto Duplo T", "Concreto Circular", "Madeira Tratada", "Metálico"],
+                    ESTRUTURAS,
                 )
             with c4:
                 potencia = st.number_input("Potência nominal (Watts)", value=int(potencia_padrao), step=10)
                 tipo_braco = st.selectbox(
                     "Tipo de braço",
-                    ["Braço Médio 2m", "Braço Curto 1m", "Braço Longo 3m", "Pétala Dupla", "Topo de Poste"],
+                    BRACOS,
                 )
 
             observacoes = st.text_area(

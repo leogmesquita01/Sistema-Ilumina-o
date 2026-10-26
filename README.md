@@ -112,6 +112,30 @@ python -m pytest
 
 ---
 
+## 📶 Coleta em campo sem internet (KoboToolbox)
+
+Nas comunidades rurais não há sinal, então o levantamento dos postes é feito no
+app **KoboCollect** (Android), que funciona offline — inclusive o GPS — e envia
+tudo quando o celular volta a ter internet.
+
+1. No [KoboToolbox](https://kf.kobotoolbox.org): **Novo projeto → Enviar um
+   XLSForm** → escolha [`kobo/levantamento_postes.xlsx`](kobo/levantamento_postes.xlsx)
+   e clique em **Implantar**.
+2. No celular, instale o **KoboCollect**, conecte à conta e baixe o formulário
+   (com internet, uma vez).
+3. Em campo: um formulário por poste (código da plaqueta, GPS, foto, rua,
+   bairro, luminária...). Fica salvo no celular.
+4. Com internet: **Enviar formulários finalizados**.
+5. No Kobo: **Dados → Downloads → XLS** e importe o arquivo na tela
+   **"Importar planilha"** do Ilumina. Os postes já entram com a localização.
+
+O importador aceita os dois formatos de cabeçalho do Kobo (rótulos ou valores
+XML). Para mudar campos ou opções, edite `kobo/gerar_formulario.py` e rode
+`python kobo/gerar_formulario.py` — as opções vêm de `app/constantes.py`, as
+mesmas da tela de cadastro.
+
+---
+
 ## 📁 Estrutura do Projeto
 
 ```
@@ -156,6 +180,10 @@ Sistema-Ilumina-o/
 │   └── migrations/
 │       ├── 001_rls.sql       # Liga o RLS nas tabelas
 │       └── 002_login.sql     # Perfis, RLS por usuário, protocolo e status
+│
+├── kobo/                     # Formulário do KoboToolbox (coleta offline)
+│   ├── gerar_formulario.py   # Gera o XLSForm a partir das constantes
+│   └── levantamento_postes.xlsx
 │
 ├── tests/                    # Testes (pytest)
 │

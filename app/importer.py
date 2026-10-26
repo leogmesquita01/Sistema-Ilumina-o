@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import pandas as pd
 
 from app.cache import limpar_cache
+from app.constantes import BRACOS, ESTRUTURAS, LUMINARIAS
 from app.database.conexao import modo_local, obter_conexao, obter_supabase
 
 # Ordem importa: campos mais específicos primeiro. Assim "tipo_poste" é
@@ -28,8 +29,10 @@ COLUMN_SYNONYMS: Dict[str, List[str]] = {
     "potencia": ["potencia", "potencia_w", "potencia_watts", "watts", "pot", "w"],
     "latitude": ["latitude", "lat", "lat_y", "coord_y", "y"],
     "longitude": ["longitude", "long", "lng", "lon", "coord_x", "x"],
-    "logradouro": ["logradouro", "rua", "endereco", "nome_rua", "logr", "via", "end"],
+    # Sem "end": o Kobo exporta uma coluna "end" (hora de fim do formulário).
+    "logradouro": ["logradouro", "rua", "endereco", "nome_rua", "logr", "via"],
     "bairro": ["bairro", "comunidade", "localidade", "distrito", "zona", "setor"],
+    "observacoes": ["observacoes", "observacao", "obs"],
     "codigo": ["codigo", "codigo_poste", "plaqueta", "barramento", "id_poste", "num_poste",
                "etiqueta", "ponnot", "poste", "cod", "ponto"],
 }
@@ -45,6 +48,7 @@ _PADROES_TEXTO = {
     "tipo_luminaria": "LED",
     "tipo_poste": "Concreto Duplo T",
     "tipo_braco": "Braço Médio 2m",
+    "observacoes": "",
 }
 _POTENCIA_PADRAO = 100
 _CAMPOS_TEXTO = list(_PADROES_TEXTO)
@@ -92,6 +96,26 @@ def identify_columns(df_columns: List[Any]) -> Dict[str, Any]:
         procurar(campo, parcial=True)
 
     return mapping
+
+
+def _chave_opcao(texto: str) -> str:
+    """'Vapor de Sódio' e 'vapor_de_sodio' viram a mesma chave."""
+    return normalizar_nome_coluna(texto).replace("_", "")
+
+
+# Campos de lista: o valor da planilha é trocado pela opção oficial do sistema
+# quando bate (ex.: o Kobo exportando "vapor_de_sodio" vira "Vapor de Sódio").
+_OPCOES_OFICIAIS = {
+    "tipo_luminaria": {_chave_opcao(o): o for o in LUMINARIAS},
+    "tipo_poste": {_chave_opcao(o): o for o in ESTRUTURAS},
+    "tipo_braco": {_chave_opcao(o): o for o in BRACOS},
+}
+
+
+def canonizar_opcao(campo: str, valor: Optional[str]) -> Optional[str]:
+    if valor is None or campo not in _OPCOES_OFICIAIS:
+        return valor
+    return _OPCOES_OFICIAIS[campo].get(_chave_opcao(valor), valor)
 
 
 def _vazio(valor: Any) -> bool:
@@ -194,7 +218,7 @@ def preparar_registros(df: pd.DataFrame, col_map: Dict[str, Any]) -> Dict[str, A
         registro: Dict[str, Any] = {"codigo": codigo}
         for campo in campos_texto:
             valor = row[col_map[campo]]
-            registro[campo] = None if _vazio(valor) else str(valor).strip()
+            registro[campo] = None if _vazio(valor) else canonizar_opcao(campo, str(valor).strip())
         if tem_potencia:
             registro["potencia"] = ler_potencia(row[col_map["potencia"]])
 

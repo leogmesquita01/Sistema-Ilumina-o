@@ -118,3 +118,75 @@ def test_codigo_repetido_na_planilha():
     assert resultado["importados"] == 1
     assert resultado["duplicados"] == 1
     assert obter_poste_por_codigo("P-05")["logradouro"] == "B"
+
+
+# --- exportação do KoboToolbox (formulário kobo/levantamento_postes.xlsx) -----
+
+_KOBO_META = {"_id": 1, "_uuid": "abc", "_submission_time": "2026-10-27T10:00:00", "_validation_status": "",
+              "_notes": "", "_status": "submitted_via_web", "_submitted_by": "", "__version__": "v1",
+              "_tags": "", "_index": 1}
+
+
+def _kobo_csv(linhas, sep=";"):
+    buffer = io.StringIO()
+    pd.DataFrame(linhas).to_csv(buffer, index=False, sep=sep)
+    return buffer.getvalue().encode("utf-8")
+
+
+def test_kobo_cabecalho_xml():
+    linha = {
+        "start": "2026-10-27T09:58:00", "end": "2026-10-27T10:00:00",
+        "codigo": "123456", "localizacao": "-6.15 -35.61 120 4.5",
+        "_localizacao_latitude": -6.15, "_localizacao_longitude": -35.61,
+        "_localizacao_altitude": 120, "_localizacao_precision": 4.5,
+        "foto": "foto.jpg", "foto_URL": "https://kf.kobotoolbox.org/x.jpg",
+        "logradouro": "Rua A", "bairro": "Centro", "referencia": "UBS",
+        "tipo_luminaria": "vapor_de_sodio", "potencia": 70, "tipo_poste": "concreto_circular",
+        "tipo_braco": "braco_curto_1m", "observacoes": "Acesa de dia", **_KOBO_META,
+    }
+    resultado = import_poles_file(_kobo_csv([linha]), "kobo.csv")
+    poste = obter_poste_por_codigo("123456")
+    assert resultado["importados"] == 1
+    assert resultado["colunas_identificadas"]["logradouro"] == "logradouro"  # e não a coluna "end"
+    assert (poste["latitude"], poste["longitude"]) == (-6.15, -35.61)
+    assert poste["tipo_luminaria"] == "Vapor de Sódio"
+    assert poste["tipo_poste"] == "Concreto Circular"
+    assert poste["tipo_braco"] == "Braço Curto 1m"
+    assert poste["potencia"] == 70
+    assert poste["observacoes"] == "Acesa de dia"
+
+
+def test_kobo_cabecalho_rotulos():
+    linha = {
+        "start": "2026-10-27T09:58:00", "end": "2026-10-27T10:00:00",
+        "Código da plaqueta": "654321", "Localização do poste": "-6.16 -35.62 0 3",
+        "_Localização do poste_latitude": -6.16, "_Localização do poste_longitude": -35.62,
+        "_Localização do poste_altitude": 0, "_Localização do poste_precision": 3,
+        "Foto do poste": "foto.jpg", "Foto do poste_URL": "https://kf.kobotoolbox.org/y.jpg",
+        "Rua / Logradouro": "Rua B", "Bairro ou comunidade": "Lagoa do Mato",
+        "Ponto de referência": "Igreja", "Tipo de luminária": "LED", "Potência (W)": 100,
+        "Tipo de estrutura": "Madeira Tratada", "Tipo de braço": "Topo de Poste",
+        "Observações": "", **_KOBO_META,
+    }
+    resultado = import_poles_file(_kobo_csv([linha]), "kobo.csv")
+    mapa = resultado["colunas_identificadas"]
+    poste = obter_poste_por_codigo("654321")
+    assert mapa["codigo"] == "Código da plaqueta"
+    assert mapa["logradouro"] == "Rua / Logradouro"
+    assert mapa["tipo_poste"] == "Tipo de estrutura"
+    assert (poste["latitude"], poste["longitude"]) == (-6.16, -35.62)
+    assert poste["bairro"] == "Lagoa do Mato"
+    assert poste["tipo_braco"] == "Topo de Poste"
+
+
+def test_formulario_kobo_usa_as_opcoes_do_sistema(tmp_path):
+    from openpyxl import load_workbook
+
+    from app.constantes import BRACOS, ESTRUTURAS, LUMINARIAS
+    from kobo.gerar_formulario import gerar
+
+    wb = load_workbook(gerar(tmp_path / "form.xlsx"))
+    rotulos = {linha[2] for linha in wb["choices"].iter_rows(min_row=2, values_only=True)}
+    assert set(LUMINARIAS + ESTRUTURAS + BRACOS) == rotulos
+    nomes = {linha[1] for linha in wb["survey"].iter_rows(min_row=2, values_only=True)}
+    assert {"codigo", "localizacao", "logradouro", "bairro", "tipo_luminaria", "potencia"} <= nomes
