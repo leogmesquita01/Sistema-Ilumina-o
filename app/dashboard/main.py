@@ -6,8 +6,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(BASE_DIR))
 
 import streamlit as st
+from app.constantes import NOME_MUNICIPIO
 from app.dashboard.estilos import aplicar_estilos
-from app.database.conexao import inicializar_banco
+from app.dashboard.html_seguro import esc
+from app.dashboard.sessao import iniciais, preparar_sessao, sair, usuario_atual
+from app.dashboard.telas.login import renderizar_tela_login
+from app.database.conexao import (
+    ErroConfiguracao,
+    SessaoNecessaria,
+    configuracao_supabase,
+    inicializar_banco,
+    modo_local,
+)
 from app.servicos.dados_postes import obter_resumo_indicadores
 
 from app.dashboard.telas.mapa_postes import renderizar_tela_mapa
@@ -18,30 +28,61 @@ from app.dashboard.telas.cadastrar_poste import renderizar_tela_cadastrar
 from app.dashboard.telas.localizacao_postes import renderizar_tela_localizacao
 
 st.set_page_config(
-    page_title="Ilumina Boa Saúde",
+    page_title=f"Ilumina {NOME_MUNICIPIO}",
     page_icon="💡",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-inicializar_banco()
 aplicar_estilos()
 
 try:
+    if modo_local():
+        inicializar_banco()
+    else:
+        configuracao_supabase()
+except ErroConfiguracao as erro:
+    st.error(str(erro))
+    st.stop()
+
+if not preparar_sessao():
+    renderizar_tela_login()
+    st.stop()
+
+
+def _sessao_expirada(erro: Exception) -> bool:
+    texto = str(erro).lower()
+    return isinstance(erro, SessaoNecessaria) or "jwt" in texto or "pgrst301" in texto
+
+
+def _tratar_erro_banco(erro: Exception) -> None:
+    """Mostra o erro do banco na tela em vez de esconder (ou desloga se expirou)."""
+    if _sessao_expirada(erro):
+        sair("Sua sessão expirou. Entre novamente.")
+        st.rerun()
+    st.error(
+        "Não foi possível falar com o banco de dados. Verifique a internet e tente de novo.\n\n"
+        f"Detalhe técnico: {erro}"
+    )
+
+
+usuario = usuario_atual()
+nome_usuario = usuario["nome"]
+iniciais_usuario = esc(iniciais(nome_usuario))
+papel_usuario = "Administrador" if usuario.get("papel") == "admin" else "Operador"
+
+try:
     stats = obter_resumo_indicadores()
-    total_postes = stats["total_postes"]
-    total_led = stats["total_led"]
-    taxa_led = int(round(stats["taxa_led"]))
-    total_chamados = stats["total_chamados"]
-    os_abertas = stats["os_abertas"]
-    os_concluidas = stats["os_concluidas"]
-except Exception:
-    total_postes = 0
-    total_led = 0
-    taxa_led = 0
-    total_chamados = 0
-    os_abertas = 0
-    os_concluidas = 0
+except Exception as erro:
+    _tratar_erro_banco(erro)
+    st.stop()
+
+total_postes = stats["total_postes"]
+total_led = stats["total_led"]
+taxa_led = int(round(stats["taxa_led"]))
+total_chamados = stats["total_chamados"]
+os_abertas = stats["os_abertas"]
+os_concluidas = stats["os_concluidas"]
 
 menu_opcoes = [
     ":material/map: Mapa e postes",
@@ -110,7 +151,7 @@ with st.sidebar:
         '</svg>'
         '</div>'
         '<span style="font-family: \'Outfit\', sans-serif; font-size: 0.96rem; font-weight: 800; letter-spacing: -0.3px; color: #FFFFFF; line-height: 1;">'
-        'Ilumina <span style="color: #10B981;">Boa Saúde</span>'
+        f'Ilumina <span style="color: #10B981;">{NOME_MUNICIPIO}</span>'
         '</span>'
         '</div>'
     )
@@ -154,12 +195,21 @@ with st.sidebar:
             f'<div style="width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #10B981;" title="Cobertura LED: {taxa_led}%">'
             '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>'
             '</div>'
-            '<div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(16, 185, 129, 0.16); border: 1px solid rgba(16, 185, 129, 0.35); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.66rem; color: #34D399; margin-top: 2px;" title="Leonardo Mesquita · Gestor Municipal">LM</div>'
+            f'<div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(16, 185, 129, 0.16); border: 1px solid rgba(16, 185, 129, 0.35); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.66rem; color: #34D399; margin-top: 2px;" title="{esc(nome_usuario)} · {papel_usuario}">{iniciais_usuario}</div>'
             '</div>'
         )
         st.markdown(rail_icons_html, unsafe_allow_html=True)
     else:
         st.session_state["sb_card"] = st.container(key="sb_card_expanded")
+
+    if not modo_local():
+        st.button(
+            ":material/logout:" if sidebar_reduzida else ":material/logout: Sair",
+            key="btn_sair",
+            on_click=sair,
+            help="Encerrar a sessão",
+            use_container_width=not sidebar_reduzida,
+        )
 
 mobile_topbar_html = (
     '<div class="v14-mobile-topbar">'
@@ -168,13 +218,13 @@ mobile_topbar_html = (
     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#052016" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>'
     '</div>'
     '<div>'
-    '<div style="font-family: \'Outfit\', sans-serif; font-size: 0.98rem; font-weight: 800; color: #FFFFFF; line-height: 1.1;">Ilumina <span style="color: #10B981;">Boa Saúde</span></div>'
+    f'<div style="font-family: \'Outfit\', sans-serif; font-size: 0.98rem; font-weight: 800; color: #FFFFFF; line-height: 1.1;">Ilumina <span style="color: #10B981;">{NOME_MUNICIPIO}</span></div>'
     '<div style="font-size: 0.65rem; color: #94A3B8;">Infraestrutura Municipal</div>'
     '</div>'
     '</div>'
     '<div style="display: flex; align-items: center; gap: 8px;">'
     f'<span class="mono" style="font-size: 0.72rem; color: #34D399; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.28); padding: 3px 9px; border-radius: 999px; font-weight: 700;">{total_postes} postes &bull; {taxa_led}% LED</span>'
-    '<div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(16, 185, 129, 0.16); border: 1px solid rgba(16, 185, 129, 0.35); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.68rem; color: #34D399;">LM</div>'
+    f'<div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(16, 185, 129, 0.16); border: 1px solid rgba(16, 185, 129, 0.35); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.68rem; color: #34D399;">{iniciais_usuario}</div>'
     '</div>'
     '</div>'
 )
@@ -192,18 +242,19 @@ with st.container(key="nav_mobile_wrap"):
 
 pagina_ativa = st.session_state["pagina_atual"]
 
-if pagina_ativa == ":material/map: Mapa e postes":
-    renderizar_tela_mapa()
-elif pagina_ativa == ":material/handyman: Solicitar reparo":
-    renderizar_tela_solicitar_reparo()
-elif pagina_ativa == ":material/assignment: Ordens de serviço":
-    renderizar_tela_ordens_servico()
-elif pagina_ativa == ":material/add_location_alt: Cadastrar poste":
-    renderizar_tela_cadastrar()
-elif pagina_ativa == ":material/upload_file: Importar planilha":
-    renderizar_tela_importar()
-elif pagina_ativa == ":material/edit_location: Localizar":
-    renderizar_tela_localizacao()
+telas = {
+    ":material/map: Mapa e postes": renderizar_tela_mapa,
+    ":material/handyman: Solicitar reparo": renderizar_tela_solicitar_reparo,
+    ":material/assignment: Ordens de serviço": renderizar_tela_ordens_servico,
+    ":material/add_location_alt: Cadastrar poste": renderizar_tela_cadastrar,
+    ":material/upload_file: Importar planilha": renderizar_tela_importar,
+    ":material/edit_location: Localizar": renderizar_tela_localizacao,
+}
+
+try:
+    telas[pagina_ativa]()
+except Exception as erro:
+    _tratar_erro_banco(erro)
 
 if not sidebar_reduzida and st.session_state.get("sb_card") is not None:
     with st.session_state["sb_card"]:
@@ -219,10 +270,10 @@ if not sidebar_reduzida and st.session_state.get("sb_card") is not None:
             '</div>'
             '</div>'
             '<div style="padding: 8px 10px; background: #0A101A; border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 14px; display: flex; align-items: center; gap: 8px;">'
-            '<div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(16, 185, 129, 0.16); border: 1px solid rgba(16, 185, 129, 0.35); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.7rem; color: #34D399; flex-shrink: 0;">LM</div>'
+            f'<div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(16, 185, 129, 0.16); border: 1px solid rgba(16, 185, 129, 0.35); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.7rem; color: #34D399; flex-shrink: 0;">{iniciais_usuario}</div>'
             '<div style="overflow: hidden;">'
-            '<div style="font-size: 0.78rem; font-weight: 600; color: #FFFFFF; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Leonardo Mesquita</div>'
-            '<div style="font-size: 0.64rem; color: #64748B;">Gestor Municipal</div>'
+            f'<div style="font-size: 0.78rem; font-weight: 600; color: #FFFFFF; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{esc(nome_usuario)}</div>'
+            f'<div style="font-size: 0.64rem; color: #64748B;">{papel_usuario}</div>'
             '</div>'
             '</div>'
             '</div>'

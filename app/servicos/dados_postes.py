@@ -1,90 +1,75 @@
-from typing import List, Dict, Any, Optional
+"""Consultas, indicadores e cadastro de postes.
+
+Cada função tem dois caminhos: Supabase (padrão) e SQLite (modo local). Não há
+mais ``try/except`` que troca de banco em silêncio: se o Supabase falhar, a
+exceção sobe e a tela mostra o erro.
+"""
 import datetime
+from typing import Any, Dict, List, Optional
+
 from app.cache import cache_ttl, limpar_cache
-from app.database.conexao import obter_conexao, obter_supabase, obter_supabase_admin
+from app.constantes import CENTRO_MUNICIPIO, STATUS_EM_ALERTA, STATUS_NORMAL
+from app.database.conexao import modo_local, obter_conexao, obter_supabase
 from app.database.paginacao import buscar_todas_paginas
 
-# Centro de Boa Saúde/RN. Usado quando o cadastro não informa coordenadas.
-COORDENADA_PADRAO = (-6.1611, -35.6025)
+# Mantido por compatibilidade com as telas: é o centro do município, usado para
+# centralizar mapas. Não é mais gravado como coordenada de poste.
+COORDENADA_PADRAO = CENTRO_MUNICIPIO
+
+
+def _agora_utc_iso() -> str:
+    return datetime.datetime.now(datetime.timezone.utc).isoformat()
 
 
 def localizacao_pendente(poste: Dict[str, Any]) -> bool:
     """True quando o poste não tem coordenada confiável.
 
-    Conta como pendente a coordenada ausente (``null``) e também a coordenada
-    padrão: o cadastro antigo gravava esse ponto fixo para todo poste novo, o que
-    empilhava a base inteira no centro da cidade.
+    Hoje, poste sem localização tem latitude/longitude ``NULL``. A coordenada do
+    centro também conta como pendente: versões antigas gravavam esse ponto fixo
+    em todo poste novo (a migração 002 converte esses casos para NULL).
     """
     lat, lng = poste.get("latitude"), poste.get("longitude")
     if lat is None or lng is None:
         return True
-    arredondado = (round(float(lat), 4), round(float(lng), 4))
-    padrao = (round(COORDENADA_PADRAO[0], 4), round(COORDENADA_PADRAO[1], 4))
-    return arredondado == padrao
-
+    try:
+        arredondado = (round(float(lat), 4), round(float(lng), 4))
+    except (TypeError, ValueError):
+        return True
+    return arredondado == (round(CENTRO_MUNICIPIO[0], 4), round(CENTRO_MUNICIPIO[1], 4))
 
 
 @cache_ttl()
 def obter_resumo_indicadores() -> Dict[str, Any]:
-    """Indicadores do painel.
+    """Indicadores do painel, contados no banco (``count=exact``)."""
+    if not modo_local():
+        sb = obter_supabase()
 
-    Usa ``count=exact`` do PostgREST em vez de baixar as tabelas inteiras: com
-    milhares de postes, contar no cliente estourava o limite de 1.000 linhas por
-    requisição e os números saíam errados (para menos), sem aviso.
-    """
-    sb = obter_supabase()
-    if sb:
-        try:
-            def contar(tabela: str, coluna: Optional[str] = None,
-                       valor: Optional[str] = None,
-                       valores: Optional[List[str]] = None) -> int:
-                consulta = sb.table(tabela).select("id", count="exact").limit(1)
-                if coluna and valor is not None:
-                    consulta = consulta.eq(coluna, valor)
-                if coluna and valores is not None:
-                    consulta = consulta.in_(coluna, valores)
-                return consulta.execute().count or 0
+        def contar(tabela: str, aplicar=None) -> int:
+            consulta = sb.table(tabela).select("id", count="exact").limit(1)
+            if aplicar:
+                consulta = aplicar(consulta)
+            return consulta.execute().count or 0
 
-            total_postes = contar("postes")
-            total_led = contar("postes", "tipo_luminaria", "LED")
-            total_chamados = contar(
-                "postes", "status", valores=["chamado_aberto", "urgente", "defeito_urgente"]
-            )
-            os_abertas = contar("ordens_servico", "status", "aberta")
-            os_concluidas = contar("ordens_servico", "status", "concluida")
+        total_postes = contar("postes")
+        # "LED", "LED 100W", "led"... todos contam como LED.
+        total_led = contar("postes", lambda c: c.ilike("tipo_luminaria", "%LED%"))
+        total_chamados = contar("postes", lambda c: c.in_("status", list(STATUS_EM_ALERTA)))
+        os_abertas = contar("ordens_servico", lambda c: c.eq("status", "aberta"))
+        os_concluidas = contar("ordens_servico", lambda c: c.eq("status", "concluida"))
+    else:
+        conn = obter_conexao()
+        cursor = conn.cursor()
 
-            taxa_led = round((total_led / total_postes * 100), 1) if total_postes > 0 else 0
+        def um(sql: str, params: tuple = ()) -> int:
+            return cursor.execute(sql, params).fetchone()[0]
 
-            return {
-                "total_postes": total_postes,
-                "total_led": total_led,
-                "taxa_led": taxa_led,
-                "total_chamados": total_chamados,
-                "os_abertas": os_abertas,
-                "os_concluidas": os_concluidas,
-            }
-        except Exception:
-            pass
-
-    conn = obter_conexao()
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT COUNT(*) FROM postes;")
-    total_postes = cursor.fetchone()[0]
-
-    cursor.execute("SELECT COUNT(*) FROM postes WHERE tipo_luminaria = 'LED';")
-    total_led = cursor.fetchone()[0]
-
-    cursor.execute("SELECT COUNT(*) FROM postes WHERE status IN ('chamado_aberto', 'urgente', 'defeito_urgente');")
-    total_chamados = cursor.fetchone()[0]
-
-    cursor.execute("SELECT COUNT(*) FROM ordens_servico WHERE status = 'aberta';")
-    os_abertas = cursor.fetchone()[0]
-
-    cursor.execute("SELECT COUNT(*) FROM ordens_servico WHERE status = 'concluida';")
-    os_concluidas = cursor.fetchone()[0]
-
-    conn.close()
+        marcadores = ",".join("?" for _ in STATUS_EM_ALERTA)
+        total_postes = um("SELECT COUNT(*) FROM postes;")
+        total_led = um("SELECT COUNT(*) FROM postes WHERE upper(tipo_luminaria) LIKE '%LED%';")
+        total_chamados = um(f"SELECT COUNT(*) FROM postes WHERE status IN ({marcadores});", STATUS_EM_ALERTA)
+        os_abertas = um("SELECT COUNT(*) FROM ordens_servico WHERE status = 'aberta';")
+        os_concluidas = um("SELECT COUNT(*) FROM ordens_servico WHERE status = 'concluida';")
+        conn.close()
 
     taxa_led = round((total_led / total_postes * 100), 1) if total_postes > 0 else 0
 
@@ -109,30 +94,28 @@ def listar_postes(filtro_status: Optional[str] = None, termo_busca: Optional[str
 
 @cache_ttl()
 def _listar_postes_cache(filtro_status: str, termo_busca: str) -> List[Dict[str, Any]]:
-    sb = obter_supabase()
-    if sb:
-        try:
-            def criar_consulta():
-                consulta = sb.table("postes").select("*").order("id", desc=True)
-                if filtro_status and filtro_status != "Todos":
-                    consulta = consulta.eq("status", filtro_status)
-                if termo_busca:
-                    # vírgula e parênteses quebrariam a sintaxe de filtro do PostgREST
-                    t = termo_busca.replace(",", " ").replace("(", " ").replace(")", " ")
-                    consulta = consulta.or_(
-                        f"codigo.ilike.%{t}%,logradouro.ilike.%{t}%,bairro.ilike.%{t}%"
-                    )
-                return consulta
+    if not modo_local():
+        sb = obter_supabase()
 
-            return buscar_todas_paginas(criar_consulta)
-        except Exception:
-            pass
+        def criar_consulta():
+            consulta = sb.table("postes").select("*").order("id", desc=True)
+            if filtro_status and filtro_status != "Todos":
+                consulta = consulta.eq("status", filtro_status)
+            if termo_busca:
+                # vírgula e parênteses quebrariam a sintaxe de filtro do PostgREST
+                t = termo_busca.replace(",", " ").replace("(", " ").replace(")", " ")
+                consulta = consulta.or_(
+                    f"codigo.ilike.%{t}%,logradouro.ilike.%{t}%,bairro.ilike.%{t}%"
+                )
+            return consulta
+
+        return buscar_todas_paginas(criar_consulta)
 
     conn = obter_conexao()
     cursor = conn.cursor()
 
     query = "SELECT * FROM postes WHERE 1=1"
-    params = []
+    params: list = []
 
     if filtro_status and filtro_status != "Todos":
         query += " AND status = ?"
@@ -144,8 +127,7 @@ def _listar_postes_cache(filtro_status: str, termo_busca: str) -> List[Dict[str,
         params.extend([termo, termo, termo])
 
     query += " ORDER BY id DESC"
-    cursor.execute(query, params)
-    rows = cursor.fetchall()
+    rows = cursor.execute(query, params).fetchall()
     conn.close()
 
     return [dict(r) for r in rows]
@@ -155,141 +137,130 @@ def _listar_postes_cache(filtro_status: str, termo_busca: str) -> List[Dict[str,
 def obter_poste_por_codigo(codigo: str) -> Optional[Dict[str, Any]]:
     if not codigo:
         return None
+    codigo = codigo.strip()
 
-    sb = obter_supabase()
-    if sb:
-        try:
-            res = sb.table("postes").select("*").ilike("codigo", codigo.strip()).limit(1).execute()
-            if not res.data:
-                return None
-            poste = res.data[0]
-            res_os = (
-                sb.table("ordens_servico")
-                .select("*")
-                .eq("codigo_poste", poste["codigo"])
-                .order("id", desc=True)
-                .limit(10)
-                .execute()
-            )
-            poste["historico_os"] = res_os.data or []
-            return poste
-        except Exception:
-            pass
+    if not modo_local():
+        sb = obter_supabase()
+        # ilike sem curinga = igualdade sem diferenciar maiúsculas. Escapa os
+        # curingas do LIKE para "P_01" não casar com "PX01".
+        padrao = codigo.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        res = sb.table("postes").select("*").ilike("codigo", padrao).limit(1).execute()
+        if not res.data:
+            return None
+        poste = res.data[0]
+        res_os = (
+            sb.table("ordens_servico")
+            .select("*")
+            .eq("codigo_poste", poste["codigo"])
+            .order("id", desc=True)
+            .limit(10)
+            .execute()
+        )
+        poste["historico_os"] = res_os.data or []
+        return poste
 
     conn = obter_conexao()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM postes WHERE codigo = ? COLLATE NOCASE;", (codigo.strip(),))
-    row = cursor.fetchone()
-
+    row = cursor.execute("SELECT * FROM postes WHERE codigo = ? COLLATE NOCASE;", (codigo,)).fetchone()
     if not row:
         conn.close()
         return None
 
     poste = dict(row)
-
-    cursor.execute("""
-        SELECT * FROM ordens_servico 
-        WHERE codigo_poste = ? 
-        ORDER BY id DESC LIMIT 10;
-    """, (poste["codigo"],))
+    cursor.execute(
+        "SELECT * FROM ordens_servico WHERE codigo_poste = ? ORDER BY id DESC LIMIT 10;",
+        (poste["codigo"],),
+    )
     poste["historico_os"] = [dict(r) for r in cursor.fetchall()]
 
     conn.close()
     return poste
 
 
+def _coordenada_ou_none(valor) -> Optional[float]:
+    if valor is None or valor == "":
+        return None
+    return float(valor)
+
+
 def cadastrar_poste(dados: Dict[str, Any]) -> bool:
-    lat_val = dados.get("latitude")
-    lng_val = dados.get("longitude")
+    """Cadastra um poste. Sem coordenada, ele fica como "localização pendente"."""
     novo_poste = {
         "codigo": dados["codigo"].strip(),
-        "latitude": float(lat_val) if lat_val is not None else COORDENADA_PADRAO[0],
-        "longitude": float(lng_val) if lng_val is not None else COORDENADA_PADRAO[1],
-        "logradouro": dados.get("logradouro") or "Não informado",
-        "bairro": dados.get("bairro") or "Centro",
-        "referencia": dados.get("referencia") or "",
+        "latitude": _coordenada_ou_none(dados.get("latitude")),
+        "longitude": _coordenada_ou_none(dados.get("longitude")),
+        "logradouro": (dados.get("logradouro") or "").strip() or "Não informado",
+        "bairro": (dados.get("bairro") or "").strip() or "Centro",
+        "referencia": (dados.get("referencia") or "").strip(),
         "tipo_luminaria": dados.get("tipo_luminaria") or "LED",
-        "potencia": int(dados.get("potencia", 100)),
+        "potencia": int(dados.get("potencia") or 100),
         "tipo_poste": dados.get("tipo_poste") or "Concreto Duplo T",
         "tipo_braco": dados.get("tipo_braco") or "Braço Médio 2m",
-        "status": dados.get("status") or "normal",
-        "observacoes": dados.get("observacoes") or "",
+        "status": dados.get("status") or STATUS_NORMAL,
+        "observacoes": (dados.get("observacoes") or "").strip(),
     }
+    if novo_poste["latitude"] is None or novo_poste["longitude"] is None:
+        novo_poste["latitude"] = novo_poste["longitude"] = None
 
-    sb = obter_supabase_admin()
-    if sb:
-        sb.table("postes").insert(novo_poste).execute()
+    if not modo_local():
+        obter_supabase().table("postes").insert(novo_poste).execute()
         limpar_cache()
         return True
 
     conn = obter_conexao()
-    cursor = conn.cursor()
-
     try:
-        cursor.execute("""
-            INSERT INTO postes (
-                codigo, latitude, longitude, logradouro, bairro, referencia,
-                tipo_luminaria, potencia, tipo_poste, tipo_braco, status, observacoes
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            novo_poste["codigo"], novo_poste["latitude"], novo_poste["longitude"],
-            novo_poste["logradouro"], novo_poste["bairro"], novo_poste["referencia"],
-            novo_poste["tipo_luminaria"], novo_poste["potencia"], novo_poste["tipo_poste"],
-            novo_poste["tipo_braco"], novo_poste["status"], novo_poste["observacoes"]
-        ))
+        colunas = ", ".join(novo_poste)
+        marcadores = ", ".join("?" for _ in novo_poste)
+        conn.execute(f"INSERT INTO postes ({colunas}) VALUES ({marcadores})", tuple(novo_poste.values()))
         conn.commit()
+    finally:
         conn.close()
+    limpar_cache()
+    return True
+
+
+def codigo_duplicado(erro: Exception) -> bool:
+    """Reconhece erro de código repetido no Postgres (23505) e no SQLite."""
+    texto = str(erro).lower()
+    return "23505" in texto or "duplicate" in texto or "unique constraint" in texto
+
+
+def atualizar_status_poste(codigo: str, status: str) -> None:
+    if not modo_local():
+        obter_supabase().table("postes").update({
+            "status": status,
+            "data_atualizacao": _agora_utc_iso(),
+        }).eq("codigo", codigo).execute()
         limpar_cache()
-        return True
-    except Exception as e:
-        conn.close()
-        raise e
-
-
-def atualizar_status_poste(codigo: str, status: str):
-    sb = obter_supabase_admin()
-    if sb:
-        try:
-            sb.table("postes").update({
-                "status": status,
-                "data_atualizacao": datetime.datetime.now(datetime.timezone.utc).isoformat()
-            }).eq("codigo", codigo).execute()
-            limpar_cache()
-            return
-        except Exception:
-            pass
+        return
 
     conn = obter_conexao()
-    cursor = conn.cursor()
-    cursor.execute("UPDATE postes SET status = ?, data_atualizacao = CURRENT_TIMESTAMP WHERE codigo = ?;", (status, codigo))
+    conn.execute(
+        "UPDATE postes SET status = ?, data_atualizacao = CURRENT_TIMESTAMP WHERE codigo = ?;",
+        (status, codigo),
+    )
     conn.commit()
     conn.close()
     limpar_cache()
 
 
 def definir_localizacao_poste(codigo: str, latitude: float, longitude: float) -> None:
-    """Grava as coordenadas de um poste já cadastrado.
-
-    Usado pela tela de georreferenciamento (escritório): o coordenador clica no
-    mapa de satélite e a coordenada medida substitui a estimada.
-    """
+    """Grava as coordenadas medidas de um poste já cadastrado."""
     lat = float(latitude)
     lng = float(longitude)
 
-    sb = obter_supabase_admin()
-    if sb:
-        sb.table("postes").update({
+    if not modo_local():
+        obter_supabase().table("postes").update({
             "latitude": lat,
             "longitude": lng,
-            "data_atualizacao": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "data_atualizacao": _agora_utc_iso(),
         }).eq("codigo", codigo).execute()
         limpar_cache()
         return
 
     conn = obter_conexao()
-    cursor = conn.cursor()
-    cursor.execute(
+    conn.execute(
         "UPDATE postes SET latitude = ?, longitude = ?, data_atualizacao = CURRENT_TIMESTAMP WHERE codigo = ?;",
         (lat, lng, codigo),
     )

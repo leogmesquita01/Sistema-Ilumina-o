@@ -11,6 +11,8 @@
 --                           servidor via obter_supabase_admin(), ignora o RLS)
 --
 -- Como aplicar: Supabase Dashboard -> SQL Editor -> cole e rode (Ctrl+Enter).
+-- ATENÇÃO: a 002_login.sql substitui a leitura pública criada aqui. Se rodar este
+-- arquivo de novo, rode a 002 logo em seguida.
 -- É idempotente: pode rodar mais de uma vez sem erro.
 -- ============================================================================
 
