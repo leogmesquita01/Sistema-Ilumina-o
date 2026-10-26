@@ -2,7 +2,8 @@ import folium
 import streamlit as st
 from streamlit_folium import st_folium
 
-from app.servicos.dados_postes import COORDENADA_PADRAO, cadastrar_poste, listar_postes
+from app.dashboard.html_seguro import esc
+from app.servicos.dados_postes import COORDENADA_PADRAO, cadastrar_poste, codigo_duplicado, listar_postes
 
 _URL_ESRI = (
     "https://server.arcgisonline.com/ArcGIS/rest/services/"
@@ -103,8 +104,8 @@ def renderizar_tela_cadastrar():
             if todos_postes:
                 ultimos_html = "".join(
                     [
-                        f'<div style="display:flex; justify-content:space-between; font-size:0.74rem; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.05);"><span class="mono" style="color:#34D399; font-weight:700;">{p["codigo"]}</span><span style="color:#94A3B8; max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{p["bairro"]}</span></div>'
-                        for p in todos_postes[-4:]
+                        f'<div style="display:flex; justify-content:space-between; font-size:0.74rem; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.05);"><span class="mono" style="color:#34D399; font-weight:700;">{esc(p["codigo"])}</span><span style="color:#94A3B8; max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{esc(p.get("bairro"))}</span></div>'
+                        for p in todos_postes[:4]  # lista vem do mais novo para o mais antigo
                     ]
                 )
                 st.markdown(
@@ -151,11 +152,11 @@ def renderizar_tela_cadastrar():
             '<div>'
             '<span class="status-pill positive">Ativo Registrado</span>'
             f'<span style="font-size: 0.9rem; color: #FFFFFF; margin-left: 10px;">Poste '
-            f'<span class="mono" style="font-weight: 700; color: #34D399;">{aviso["codigo"]}</span> gravado.</span>'
+            f'<span class="mono" style="font-weight: 700; color: #34D399;">{esc(aviso["codigo"])}</span> gravado.</span>'
             '</div>'
             '<div style="display: flex; gap: 8px; align-items: center;">'
             f'{pill_loc}'
-            f'<span style="font-size: 0.82rem; color: #94A3B8;">{aviso["logradouro"]} · {aviso["bairro"]}</span>'
+            f'<span style="font-size: 0.82rem; color: #94A3B8;">{esc(aviso["logradouro"])} · {esc(aviso["bairro"])}</span>'
             '</div>'
             '</div>',
             unsafe_allow_html=True,
@@ -249,7 +250,7 @@ def renderizar_tela_cadastrar():
                 "longitude": ponto["lng"] if ponto else None,
             })
         except Exception as e:
-            if "duplicate" in str(e).lower():
+            if codigo_duplicado(e):
                 st.error(f"Já existe um poste com o código {codigo.strip()}. Use outro código ou edite o existente.")
             else:
                 st.error(f"Erro ao cadastrar poste: {str(e)}")

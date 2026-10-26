@@ -1,4 +1,6 @@
 import streamlit as st
+from app.constantes import NOME_MUNICIPIO, UF_MUNICIPIO, PRIORIDADE_URGENTE
+from app.dashboard.html_seguro import esc
 from app.servicos.ordens_service import listar_ordens, concluir_ordem_servico, gerar_mensagem_whatsapp
 from app.fuso import para_local
 
@@ -7,7 +9,7 @@ def renderizar_tela_ordens_servico():
     todas_ordens = listar_ordens(filtro_status="Todos")
     total_os = len(todas_ordens)
     abertas = [o for o in todas_ordens if o.get("status") == "aberta"]
-    urgentes = [o for o in abertas if o.get("prioridade") == "Urgente"]
+    urgentes = [o for o in abertas if o.get("prioridade") == PRIORIDADE_URGENTE]
     concluidas = [o for o in todas_ordens if o.get("status") == "concluida"]
 
     taxa_conclusao = round((len(concluidas) / total_os) * 100, 1) if total_os > 0 else 100.0
@@ -24,7 +26,7 @@ def renderizar_tela_ordens_servico():
         '<div class="hero-right">'
         '<div style="font-size: 0.72rem; color: #64748B; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700;">Total Histórico</div>'
         f'<div class="mono" style="font-size: 1.05rem; font-weight: 700; color: #10B981; margin-top: 2px;">{total_os} Ordens</div>'
-        '<div style="font-size: 0.75rem; color: #94A3B8; margin-top: 2px;">Boa Saúde · RN</div>'
+        f'<div style="font-size: 0.75rem; color: #94A3B8; margin-top: 2px;">{NOME_MUNICIPIO} · {UF_MUNICIPIO}</div>'
         '</div>'
         '</div>'
         '<div class="bento-kpi-grid" style="grid-template-columns: repeat(3, 1fr);">'
@@ -112,10 +114,10 @@ def renderizar_tela_ordens_servico():
         ordens = [
             o
             for o in ordens
-            if t in o.get("protocolo", "").lower()
-            or t in o.get("codigo_poste", "").lower()
-            or t in o.get("logradouro", "").lower()
-            or t in o.get("defeito", "").lower()
+            if t in (o.get("protocolo") or "").lower()
+            or t in (o.get("codigo_poste") or "").lower()
+            or t in (o.get("logradouro") or "").lower()
+            or t in (o.get("defeito") or "").lower()
         ]
 
     if not ordens:
@@ -136,20 +138,20 @@ def renderizar_tela_ordens_servico():
 
     for os_item in ordens:
         is_aberta = os_item["status"] == "aberta"
-        prioridade_item = os_item.get("prioridade", "Normal")
+        prioridade_item = os_item.get("prioridade") or "Normal"
 
         if not is_aberta:
             pill_status = '<span class="status-pill positive">Concluída</span>'
-        elif prioridade_item == "Urgente":
+        elif prioridade_item == PRIORIDADE_URGENTE:
             pill_status = '<span class="status-pill negative">Aberta · Urgente</span>'
         else:
-            pill_status = f'<span class="status-pill warning">Aberta · {prioridade_item}</span>'
+            pill_status = f'<span class="status-pill warning">Aberta · {esc(prioridade_item)}</span>'
 
         materiais_lista = os_item.get("materiais_lista", [])
         if materiais_lista:
             chips_html = "".join(
                 [
-                    f'<span class="mat-chip">{m.get("quantidade", 1)}x {m.get("item", "")}</span>'
+                    f'<span class="mat-chip">{esc(m.get("quantidade", 1))}x {esc(m.get("item"), "")}</span>'
                     for m in materiais_lista
                 ]
             )
@@ -157,18 +159,18 @@ def renderizar_tela_ordens_servico():
             chips_html = '<span class="mat-chip">Vistoria técnica no local</span>'
 
         dt_abertura = para_local(os_item.get("data_abertura"))
-        data_abertura = dt_abertura.strftime("%Y-%m-%d") if dt_abertura else (str(os_item.get("data_abertura", ""))[:10] or "—")
+        data_abertura = dt_abertura.strftime("%d/%m/%Y") if dt_abertura else (str(os_item.get("data_abertura") or "")[:10] or "—")
 
         card_os_html = (
             '<div class="panel-card" style="margin-bottom: 12px; padding: 18px 22px;">'
             '<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; flex-wrap: wrap;">'
             '<div>'
             '<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">'
-            f'<span class="mono" style="font-size: 1rem; font-weight: 800; color: #FFFFFF;">{os_item["protocolo"]}</span>'
-            f'<span class="mono" style="font-size: 0.85rem; font-weight: 700; color: #34D399; background: rgba(16, 185, 129, 0.12); padding: 2px 9px; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.3);">Poste {os_item["codigo_poste"]}</span>'
-            f'<span style="font-size: 0.85rem; color: #94A3B8;">{os_item.get("logradouro", "")} · {os_item.get("bairro", "")}</span>'
+            f'<span class="mono" style="font-size: 1rem; font-weight: 800; color: #FFFFFF;">{esc(os_item["protocolo"])}</span>'
+            f'<span class="mono" style="font-size: 0.85rem; font-weight: 700; color: #34D399; background: rgba(16, 185, 129, 0.12); padding: 2px 9px; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.3);">Poste {esc(os_item["codigo_poste"])}</span>'
+            f'<span style="font-size: 0.85rem; color: #94A3B8;">{esc(os_item.get("logradouro"))} · {esc(os_item.get("bairro"))}</span>'
             '</div>'
-            f'<div style="font-size: 0.95rem; color: #F8FAFC; margin-top: 10px; font-weight: 600;">{os_item["defeito"]}</div>'
+            f'<div style="font-size: 0.95rem; color: #F8FAFC; margin-top: 10px; font-weight: 600;">{esc(os_item["defeito"])}</div>'
             f'<div class="chip-group">{chips_html}</div>'
             '</div>'
             '<div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">'
@@ -184,11 +186,13 @@ def renderizar_tela_ordens_servico():
             zap_url = gerar_mensagem_whatsapp(
                 protocolo=os_item["protocolo"],
                 codigo_poste=os_item["codigo_poste"],
-                logradouro=os_item.get("logradouro", ""),
-                bairro=os_item.get("bairro", ""),
+                logradouro=os_item.get("logradouro") or "",
+                bairro=os_item.get("bairro") or "",
                 defeito=os_item["defeito"],
                 prioridade=prioridade_item,
-                luminaria=f"{os_item.get('tipo_luminaria', 'LED')} {os_item.get('potencia', 100)}W",
+                luminaria=f"{os_item.get('tipo_luminaria') or 'LED'} {os_item.get('potencia') or 100}W",
+                latitude=os_item.get("latitude"),
+                longitude=os_item.get("longitude"),
                 materiais=materiais_lista,
             )
             c_acao1, c_acao2, _ = st.columns([1.3, 1.3, 3.4])

@@ -3,13 +3,15 @@ from folium import plugins
 import streamlit as st
 import streamlit.components.v1 as components
 
+from app.constantes import NOME_MUNICIPIO, STATUS_CHAMADO, UF_MUNICIPIO, eh_urgente
+from app.dashboard.html_seguro import esc
 from app.servicos.dados_postes import localizacao_pendente
 
 
 def status_pill_html(status: str) -> str:
-    if status in ("urgente", "defeito_urgente"):
+    if eh_urgente(status):
         return '<span class="status-pill negative">● Defeito Urgente</span>'
-    if status == "chamado_aberto":
+    if status == STATUS_CHAMADO:
         return '<span class="status-pill warning">● Chamado Aberto</span>'
     return '<span class="status-pill positive">● Operacional</span>'
 
@@ -28,7 +30,7 @@ def renderizar_mapa_folium(postes: list, centro_mapa: list, zoom_inicial: int, c
 
     st.markdown(
         '<div style="display: flex; justify-content: space-between; align-items: center; background: #0F1724; border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 11px 18px; margin-bottom: 10px;">'
-        '<span style="font-size: 0.82rem; font-weight: 700; color: #F8FAFC;">Geolocalização &bull; Boa Saúde / RN</span>'
+        f'<span style="font-size: 0.82rem; font-weight: 700; color: #F8FAFC;">Geolocalização &bull; {NOME_MUNICIPIO} / {UF_MUNICIPIO}</span>'
         '<div style="display: flex; gap: 14px; font-size: 0.75rem; color: #94A3B8;">'
         f'{aviso_sem_local}'
         '<span style="display: inline-flex; align-items: center; gap: 5px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #10B981;"></span>Operacional</span>'
@@ -89,21 +91,21 @@ def renderizar_mapa_folium(postes: list, centro_mapa: list, zoom_inicial: int, c
         cor = "green"
         icone = "bolt"
         status_label = "Operacional"
-        if status == "chamado_aberto":
+        if status == STATUS_CHAMADO:
             cor = "orange"
             icone = "warning"
             status_label = "Chamado aberto"
-        elif status in ("urgente", "defeito_urgente"):
+        elif eh_urgente(status):
             cor = "red"
             icone = "exclamation"
             status_label = "Defeito urgente"
 
         popup_html = (
             '<div style="font-family: \'Plus Jakarta Sans\', sans-serif; min-width: 185px; color: #0F172A;">'
-            f'<div style="font-family: monospace; font-weight: 800; font-size: 13.5px; color: #059669; margin-bottom: 2px;">Poste {p["codigo"]}</div>'
-            f'<div style="font-size: 12px; color: #334155; margin-bottom: 6px;">{p["logradouro"]} &bull; {p["bairro"]}</div>'
+            f'<div style="font-family: monospace; font-weight: 800; font-size: 13.5px; color: #059669; margin-bottom: 2px;">Poste {esc(p["codigo"])}</div>'
+            f'<div style="font-size: 12px; color: #334155; margin-bottom: 6px;">{esc(p.get("logradouro"))} &bull; {esc(p.get("bairro"))}</div>'
             '<div style="border-top: 1px solid #E2E8F0; padding-top: 6px; font-size: 11.5px;">'
-            f'Luminária: <b>{p["tipo_luminaria"]} {p["potencia"]}W</b><br>'
+            f'Luminária: <b>{esc(p.get("tipo_luminaria"))} {esc(p.get("potencia") or 100)}W</b><br>'
             f'Status: <b>{status_label}</b>'
             '</div>'
             '</div>'
@@ -112,7 +114,7 @@ def renderizar_mapa_folium(postes: list, centro_mapa: list, zoom_inicial: int, c
         marcador = folium.Marker(
             location=[p["latitude"], p["longitude"]],
             popup=folium.Popup(popup_html, max_width=240),
-            tooltip=f"{p['codigo']} · {p['logradouro']} ({p['tipo_luminaria']} {p['potencia']}W)",
+            tooltip=esc(f"{p['codigo']} · {p.get('logradouro') or '—'} ({p.get('tipo_luminaria') or '—'} {p.get('potencia') or 100}W)"),
             icon=folium.Icon(color=cor, icon=icone, prefix="fa"),
         )
         marcador.add_to(cluster)

@@ -1,4 +1,6 @@
 import streamlit as st
+from app.constantes import STATUS_CHAMADO, eh_urgente
+from app.dashboard.html_seguro import esc
 from app.servicos.dados_postes import listar_postes, obter_poste_por_codigo, cadastrar_poste
 from app.servicos.ordens_service import criar_ordem_servico, gerar_mensagem_whatsapp
 
@@ -40,7 +42,7 @@ def renderizar_tela_solicitar_reparo():
             )
             if todos_postes:
                 opcoes_postes = {
-                    f"{p['codigo']} · {p['logradouro']} ({p['bairro']})": p["codigo"] for p in todos_postes
+                    f"{p['codigo']} · {p.get('logradouro') or '—'} ({p.get('bairro') or '—'})": p["codigo"] for p in todos_postes
                 }
                 opcoes_lista = list(opcoes_postes.keys()) + ["+ Novo poste não listado"]
 
@@ -71,9 +73,9 @@ def renderizar_tela_solicitar_reparo():
             if poste and not modo_novo_poste:
                 st.markdown(
                     '<div style="background: #0A101A; border: 1px solid rgba(16,185,129,0.25); border-radius: 14px; padding: 10px 12px; margin-top: 6px;">'
-                    f'<div class="mono" style="font-size: 0.9rem; font-weight: 800; color: #FFFFFF;">{poste["codigo"]}</div>'
-                    f'<div style="font-size: 0.74rem; color: #94A3B8; margin-top: 2px;">{poste["logradouro"]} · {poste["bairro"]}</div>'
-                    f'<div class="mono" style="font-size: 0.72rem; color: #34D399; margin-top: 4px;">{poste["tipo_luminaria"]} {poste["potencia"]}W</div>'
+                    f'<div class="mono" style="font-size: 0.9rem; font-weight: 800; color: #FFFFFF;">{esc(poste["codigo"])}</div>'
+                    f'<div style="font-size: 0.74rem; color: #94A3B8; margin-top: 2px;">{esc(poste.get("logradouro"))} · {esc(poste.get("bairro"))}</div>'
+                    f'<div class="mono" style="font-size: 0.72rem; color: #34D399; margin-top: 4px;">{esc(poste.get("tipo_luminaria"))} {esc(poste.get("potencia") or 100)}W</div>'
                     '</div>',
                     unsafe_allow_html=True,
                 )
@@ -86,33 +88,33 @@ def renderizar_tela_solicitar_reparo():
 
     if poste and not modo_novo_poste:
         status_atual = poste.get("status", "normal")
-        if status_atual in ("urgente", "defeito_urgente"):
+        if eh_urgente(status_atual):
             pill_status = '<span class="status-pill negative">Defeito Urgente</span>'
-        elif status_atual == "chamado_aberto":
+        elif status_atual == STATUS_CHAMADO:
             pill_status = '<span class="status-pill warning">O.S. em Aberto</span>'
         else:
             pill_status = '<span class="status-pill positive">Operacional</span>'
 
-        ref_txt = f" · {poste['referencia']}" if poste.get("referencia") else ""
+        ref_txt = f" · {esc(poste['referencia'])}" if poste.get("referencia") else ""
         card_poste_html = (
             '<div class="panel-card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; border-color: rgba(16, 185, 129, 0.28);">'
             '<div>'
             '<div style="display: flex; align-items: center; gap: 10px;">'
-            f'<span class="mono" style="font-size: 1.25rem; font-weight: 800; color: #FFFFFF;">{poste["codigo"]}</span>'
+            f'<span class="mono" style="font-size: 1.25rem; font-weight: 800; color: #FFFFFF;">{esc(poste["codigo"])}</span>'
             f'{pill_status}'
             '</div>'
             '<div style="font-size: 0.88rem; color: #94A3B8; margin-top: 4px;">'
-            f'{poste["logradouro"]} · <strong style="color: #E2E8F0;">{poste["bairro"]}</strong>{ref_txt}'
+            f'{esc(poste.get("logradouro"))} · <strong style="color: #E2E8F0;">{esc(poste.get("bairro"))}</strong>{ref_txt}'
             '</div>'
             '</div>'
             '<div style="display: flex; gap: 12px;">'
             '<div class="spec-tile" style="padding: 8px 14px;">'
             '<div class="spec-tile-label">Luminária</div>'
-            f'<div class="spec-tile-val">{poste["tipo_luminaria"]} <span class="mono" style="color: #34D399;">{poste["potencia"]}W</span></div>'
+            f'<div class="spec-tile-val">{esc(poste.get("tipo_luminaria"))} <span class="mono" style="color: #34D399;">{esc(poste.get("potencia") or 100)}W</span></div>'
             '</div>'
             '<div class="spec-tile" style="padding: 8px 14px;">'
             '<div class="spec-tile-label">Braço / Suporte</div>'
-            f'<div class="spec-tile-val">{poste["tipo_braco"]}</div>'
+            f'<div class="spec-tile-val">{esc(poste.get("tipo_braco"))}</div>'
             '</div>'
             '</div>'
             '</div>'
@@ -188,7 +190,7 @@ def renderizar_tela_solicitar_reparo():
             unsafe_allow_html=True,
         )
 
-        potencia_ref = poste["potencia"] if poste else 100
+        potencia_ref = (poste.get("potencia") or 100) if poste else 100
         label_lampada = f"Lâmpada LED {potencia_ref}W"
 
         c_mat1, c_mat2 = st.columns(2)
@@ -253,6 +255,7 @@ def renderizar_tela_solicitar_reparo():
             log_alvo = novo_logradouro.strip() if novo_logradouro else "Não informado"
             bairro_alvo = novo_bairro.strip() if novo_bairro else "Centro"
             lum_alvo = "LED 100W"
+            lat_alvo = lng_alvo = None
 
             existente = obter_poste_por_codigo(cod_alvo)
             if not existente:
@@ -263,9 +266,10 @@ def renderizar_tela_solicitar_reparo():
                 })
         else:
             cod_alvo = poste["codigo"]
-            log_alvo = poste["logradouro"]
-            bairro_alvo = poste["bairro"]
-            lum_alvo = f"{poste['tipo_luminaria']} {poste['potencia']}W"
+            log_alvo = poste.get("logradouro") or "Não informado"
+            bairro_alvo = poste.get("bairro") or ""
+            lum_alvo = f"{poste.get('tipo_luminaria') or 'LED'} {poste.get('potencia') or 100}W"
+            lat_alvo, lng_alvo = poste.get("latitude"), poste.get("longitude")
 
         materiais = []
         if usar_lampada:
@@ -298,6 +302,8 @@ def renderizar_tela_solicitar_reparo():
             defeito=defeito,
             prioridade=prioridade,
             luminaria=lum_alvo,
+            latitude=lat_alvo,
+            longitude=lng_alvo,
             materiais=materiais,
         )
 
@@ -307,13 +313,13 @@ def renderizar_tela_solicitar_reparo():
                 <div>
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <span class="status-pill positive">O.S. Emitida</span>
-                        <span class="mono" style="font-size: 1.1rem; font-weight: 800; color: #FFFFFF;">{protocolo}</span>
+                        <span class="mono" style="font-size: 1.1rem; font-weight: 800; color: #FFFFFF;">{esc(protocolo)}</span>
                     </div>
                     <div style="font-size: 0.85rem; color: #94A3B8; margin-top: 6px;">
-                        Poste <span class="mono" style="color: #F8FAFC; font-weight: 700;">{cod_alvo}</span> atualizado na base. Envie o despacho para o eletricista:
+                        Poste <span class="mono" style="color: #F8FAFC; font-weight: 700;">{esc(cod_alvo)}</span> atualizado na base. Envie o despacho para o eletricista:
                     </div>
                 </div>
-                <a href="{zap_url}" target="_blank" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: #FFFFFF; padding: 10px 18px; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 0.86rem; box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);">
+                <a href="{esc(zap_url)}" target="_blank" rel="noopener" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: #FFFFFF; padding: 10px 18px; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 0.86rem; box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);">
                     Enviar Despacho via WhatsApp
                 </a>
             </div>

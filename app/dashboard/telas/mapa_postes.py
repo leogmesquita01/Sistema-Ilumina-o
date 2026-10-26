@@ -1,13 +1,16 @@
-import datetime
-import urllib.parse
 from collections import Counter
 import streamlit as st
+from app.constantes import NOME_MUNICIPIO, UF_MUNICIPIO, STATUS_CHAMADO, STATUS_NORMAL, STATUS_URGENTE, eh_urgente
+from app.dashboard.html_seguro import esc
+from app.dashboard.sessao import usuario_atual
 from app.servicos.dados_postes import (
+    COORDENADA_PADRAO,
     listar_postes,
     obter_resumo_indicadores,
     obter_poste_por_codigo,
     localizacao_pendente,
 )
+from app.servicos.ordens_service import link_rota
 from app.dashboard.telas.componentes_mapa import status_pill_html, renderizar_mapa_folium
 from app.fuso import agora_local
 
@@ -24,7 +27,7 @@ def _renderizar_overview(stats: dict, todos_postes_base: list) -> tuple[int, int
     total_os = os_abertas + os_concluidas
     taxa_os = int(round((os_concluidas / total_os) * 100)) if total_os > 0 else 100
 
-    contagem_bairros = Counter(p.get("bairro", "Centro") for p in todos_postes_base)
+    contagem_bairros = Counter(p.get("bairro") or "Sem bairro" for p in todos_postes_base)
     top_bairros = contagem_bairros.most_common(5) or [("Centro", 0), ("Bela Vista", 0), ("Lagoa", 0), ("Córrego", 0)]
     max_b = max((q for _, q in top_bairros), default=1) or 1
 
@@ -33,7 +36,7 @@ def _renderizar_overview(stats: dict, todos_postes_base: list) -> tuple[int, int
         q_led_b = sum(
             1
             for p in todos_postes_base
-            if p.get("bairro", "Centro") == b_nome and "LED" in str(p.get("tipo_luminaria", "")).upper()
+            if (p.get("bairro") or "Sem bairro") == b_nome and "LED" in str(p.get("tipo_luminaria") or "").upper()
         )
         h_tot = max(10, int((q_total / max_b) * 86)) if q_total > 0 else 8
         h_led = max(8, int((q_led_b / max_b) * 86)) if q_led_b > 0 else 6
@@ -43,7 +46,7 @@ def _renderizar_overview(stats: dict, todos_postes_base: list) -> tuple[int, int
             f'<div class="v14-bar-pill" style="height: {h_tot}px; background: #1E293B;" title="Total: {q_total}"></div>'
             f'<div class="v14-bar-pill" style="height: {h_led}px; background: #10B981;" title="LED: {q_led_b}"></div>'
             '</div>'
-            f'<span class="v14-bar-lbl">{b_nome}</span>'
+            f'<span class="v14-bar-lbl">{esc(b_nome)}</span>'
             '</div>'
         )
 
@@ -140,13 +143,13 @@ def renderizar_tela_mapa() -> None:
     st.markdown(
         '<div class="v14-header">'
         '<div>'
-        f'<h1 class="v14-greeting-title">{saudacao}, Leonardo Mesquita</h1>'
+        f'<h1 class="v14-greeting-title">{saudacao}, {esc(usuario_atual()["nome"])}</h1>'
         f'<p class="v14-greeting-sub">{subtitulo}</p>'
         '</div>'
         '<div class="v14-header-pills">'
         '<div class="v14-sync-pill">'
         '<span class="hero-dot"></span>'
-        f'<span>Boa Saúde / RN &bull; Sincronizado às <strong class="mono" style="color: #F8FAFC;">{hora_atual}</strong></span>'
+        f'<span>{NOME_MUNICIPIO} / {UF_MUNICIPIO} &bull; Sincronizado às <strong class="mono" style="color: #F8FAFC;">{hora_atual}</strong></span>'
         '</div>'
         '</div>'
         '</div>',
@@ -177,9 +180,9 @@ def renderizar_tela_mapa() -> None:
 
     opcoes_status = {
         "Todos os status": "Todos",
-        "Operacional (normal)": "normal",
-        "Chamado aberto": "chamado_aberto",
-        "Defeito urgente": "defeito_urgente",
+        "Operacional (normal)": STATUS_NORMAL,
+        "Chamado aberto": STATUS_CHAMADO,
+        "Defeito urgente": STATUS_URGENTE,
     }
     opcoes_camada = ["Mapa de ruas", "Satélite (Esri)", "Modo noturno (Dark)"]
     sidebar_reduzida = st.session_state.get("sidebar_reduzida", False)
@@ -217,11 +220,11 @@ def renderizar_tela_mapa() -> None:
 
     poste_focado = None
     if busca_termo and busca_termo.strip():
-        exatos = [p for p in postes if p["codigo"].lower() == busca_termo.strip().lower()]
+        exatos = [p for p in postes if str(p["codigo"]).lower() == busca_termo.strip().lower()]
         poste_focado = exatos[0] if exatos else (postes[0] if postes else None)
 
     opcoes_inspecao = ["Visão geral da rede"] + [
-        f"{p['codigo']} · {p['logradouro']} ({p['bairro']})" for p in postes
+        f"{p['codigo']} · {p.get('logradouro') or '—'} ({p.get('bairro') or '—'})" for p in postes
     ]
     idx_inspecao = 0
     if poste_focado:
@@ -250,7 +253,7 @@ def renderizar_tela_mapa() -> None:
     # cidade: a coordenada dele ainda não significa nada.
     poste_localizavel = poste_focado is not None and not localizacao_pendente(poste_focado)
     centro_mapa = (
-        [poste_focado["latitude"], poste_focado["longitude"]] if poste_localizavel else [-6.1611, -35.6025]
+        [poste_focado["latitude"], poste_focado["longitude"]] if poste_localizavel else list(COORDENADA_PADRAO)
     )
     zoom_inicial = 18 if poste_localizavel else 15
 
@@ -261,7 +264,7 @@ def renderizar_tela_mapa() -> None:
         if poste_focado:
             p_completo = obter_poste_por_codigo(poste_focado["codigo"]) or poste_focado
             pill_html = status_pill_html(p_completo["status"])
-            potencia_val = p_completo.get("potencia", 100)
+            potencia_val = p_completo.get("potencia") or 100
             consumo_mensal_kwh = round((potencia_val * 12 * 30) / 1000, 1)
 
             dossie_html = (
@@ -275,16 +278,16 @@ def renderizar_tela_mapa() -> None:
                 '</div>'
                 '<div style="margin-bottom: 20px;">'
                 '<div style="font-size: 0.72rem; color: #94A3B8; letter-spacing: 0.06em; text-transform: uppercase;">Identificador Oficial</div>'
-                f'<div class="mono" style="font-size: 1.75rem; font-weight: 800; color: #FFFFFF; letter-spacing: 0.04em; margin-top: 2px;">{p_completo["codigo"]}</div>'
+                f'<div class="mono" style="font-size: 1.75rem; font-weight: 800; color: #FFFFFF; letter-spacing: 0.04em; margin-top: 2px;">{esc(p_completo["codigo"])}</div>'
                 '</div>'
                 '<div style="display: flex; justify-content: space-between; align-items: flex-end; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px;">'
                 '<div>'
                 '<div style="font-size: 0.68rem; color: #64748B; text-transform: uppercase;">Localidade</div>'
-                f'<div style="font-size: 0.84rem; font-weight: 600; color: #E2E8F0;">{p_completo["bairro"]}</div>'
+                f'<div style="font-size: 0.84rem; font-weight: 600; color: #E2E8F0;">{esc(p_completo.get("bairro"))}</div>'
                 '</div>'
                 '<div style="text-align: right;">'
                 '<div style="font-size: 0.68rem; color: #64748B; text-transform: uppercase;">Luminária</div>'
-                f'<div class="mono" style="font-size: 0.84rem; font-weight: 700; color: #34D399;">{p_completo["tipo_luminaria"]} {potencia_val}W</div>'
+                f'<div class="mono" style="font-size: 0.84rem; font-weight: 700; color: #34D399;">{esc(p_completo.get("tipo_luminaria"))} {esc(potencia_val)}W</div>'
                 '</div>'
                 '</div>'
                 '</div>'
@@ -294,10 +297,10 @@ def renderizar_tela_mapa() -> None:
                 f'<span class="panel-meta">{consumo_mensal_kwh} kWh/mês</span>'
                 '</div>'
                 '<div class="kv-list">'
-                f'<div class="kv-row"><span class="kv-key">Logradouro</span><span class="kv-val">{p_completo["logradouro"]}</span></div>'
-                f'<div class="kv-row"><span class="kv-key">Ponto de referência</span><span class="kv-val">{p_completo.get("referencia") or "—"}</span></div>'
-                f'<div class="kv-row"><span class="kv-key">Estrutura física</span><span class="kv-val">{p_completo["tipo_poste"]}</span></div>'
-                f'<div class="kv-row"><span class="kv-key">Braço / Suporte</span><span class="kv-val">{p_completo["tipo_braco"]}</span></div>'
+                f'<div class="kv-row"><span class="kv-key">Logradouro</span><span class="kv-val">{esc(p_completo.get("logradouro"))}</span></div>'
+                f'<div class="kv-row"><span class="kv-key">Ponto de referência</span><span class="kv-val">{esc(p_completo.get("referencia"))}</span></div>'
+                f'<div class="kv-row"><span class="kv-key">Estrutura física</span><span class="kv-val">{esc(p_completo.get("tipo_poste"))}</span></div>'
+                f'<div class="kv-row"><span class="kv-key">Braço / Suporte</span><span class="kv-val">{esc(p_completo.get("tipo_braco"))}</span></div>'
                 '</div>'
                 '</div>'
             )
@@ -307,16 +310,17 @@ def renderizar_tela_mapa() -> None:
                 st.markdown(
                     '<div class="panel-card" style="padding: 14px 18px;">'
                     '<div style="font-size: 0.74rem; color: #94A3B8; font-weight: 600; margin-bottom: 4px;">Observações de Campo</div>'
-                    f'<div style="font-size: 0.86rem; color: #F8FAFC;">{p_completo["observacoes"]}</div>'
+                    f'<div style="font-size: 0.86rem; color: #F8FAFC;">{esc(p_completo["observacoes"])}</div>'
                     '</div>',
                     unsafe_allow_html=True,
                 )
 
-            if round(float(p_completo.get("latitude", -6.1611)), 4) != -6.1611 or round(float(p_completo.get("longitude", -35.6025)), 4) != -35.6025:
-                maps_url = f"https://www.google.com/maps/dir/?api=1&destination={p_completo['latitude']},{p_completo['longitude']}"
-            else:
-                end_q = urllib.parse.quote(f"{p_completo.get('logradouro', '')}, {p_completo.get('bairro', '')}, Boa Saúde - RN")
-                maps_url = f"https://www.google.com/maps/dir/?api=1&destination={end_q}"
+            maps_url = link_rota(
+                p_completo.get("latitude"),
+                p_completo.get("longitude"),
+                p_completo.get("logradouro") or "",
+                p_completo.get("bairro") or "",
+            )
 
             c_btn1, c_btn2 = st.columns(2)
             with c_btn1:
@@ -354,7 +358,7 @@ def renderizar_tela_mapa() -> None:
 
             postes_prioritarios = sorted(
                 postes,
-                key=lambda x: 0 if x["status"] in ("urgente", "defeito_urgente") else (1 if x["status"] == "chamado_aberto" else 2),
+                key=lambda x: 0 if eh_urgente(x["status"]) else (1 if x["status"] == STATUS_CHAMADO else 2),
             )[:5]
 
             if postes_prioritarios:
@@ -362,9 +366,9 @@ def renderizar_tela_mapa() -> None:
                 for item in postes_prioritarios:
                     pill = status_pill_html(item["status"])
                     st_item = item["status"]
-                    if st_item in ("urgente", "defeito_urgente"):
+                    if eh_urgente(st_item):
                         av_bg, av_col, av_border = "rgba(244, 63, 94, 0.14)", "#FB7185", "rgba(244, 63, 94, 0.3)"
-                    elif st_item == "chamado_aberto":
+                    elif st_item == STATUS_CHAMADO:
                         av_bg, av_col, av_border = "rgba(245, 158, 11, 0.14)", "#FBBF24", "rgba(245, 158, 11, 0.3)"
                     else:
                         av_bg, av_col, av_border = "rgba(16, 185, 129, 0.12)", "#34D399", "rgba(16, 185, 129, 0.25)"
@@ -372,10 +376,10 @@ def renderizar_tela_mapa() -> None:
                     linhas_atividades += (
                         '<div class="v14-activity-row">'
                         '<div class="v14-activity-left">'
-                        f'<div class="v14-avatar" style="background: {av_bg}; color: {av_col}; border: 1px solid {av_border};">{item["codigo"][:4]}</div>'
+                        f'<div class="v14-avatar" style="background: {av_bg}; color: {av_col}; border: 1px solid {av_border};">{esc(str(item["codigo"])[:4])}</div>'
                         '<div>'
-                        f'<div style="font-size: 0.86rem; font-weight: 600; color: #F8FAFC;">{item["codigo"]} &bull; {item["logradouro"]}</div>'
-                        f'<div style="font-size: 0.75rem; color: #94A3B8;">{item["bairro"]} &bull; {item["tipo_luminaria"]} {item["potencia"]}W</div>'
+                        f'<div style="font-size: 0.86rem; font-weight: 600; color: #F8FAFC;">{esc(item["codigo"])} &bull; {esc(item.get("logradouro"))}</div>'
+                        f'<div style="font-size: 0.75rem; color: #94A3B8;">{esc(item.get("bairro"))} &bull; {esc(item.get("tipo_luminaria"))} {esc(item.get("potencia") or 100)}W</div>'
                         '</div>'
                         '</div>'
                         f'<div style="text-align: right;">{pill}</div>'

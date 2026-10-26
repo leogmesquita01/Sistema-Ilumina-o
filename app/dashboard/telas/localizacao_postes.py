@@ -11,6 +11,8 @@ import folium
 import streamlit as st
 from streamlit_folium import st_folium
 
+from app.constantes import NOME_MUNICIPIO
+from app.dashboard.html_seguro import esc
 from app.servicos.dados_postes import (
     COORDENADA_PADRAO,
     definir_localizacao_poste,
@@ -107,11 +109,11 @@ def _renderizar_card(poste, candidato) -> None:
     st.markdown(
         '<div class="panel-card" style="padding: 18px 20px;">'
         '<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px;">'
-        f'<span class="mono" style="font-size: 1.05rem; font-weight: 800; color: #FFFFFF;">{poste["codigo"]}</span>'
+        f'<span class="mono" style="font-size: 1.05rem; font-weight: 800; color: #FFFFFF;">{esc(poste["codigo"])}</span>'
         f'{pill}'
         '</div>'
-        f'<div style="font-size: 0.86rem; color: #E2E8F0; font-weight: 600;">{poste["logradouro"]}</div>'
-        f'<div style="font-size: 0.78rem; color: #94A3B8; margin-bottom: 12px;">{poste["bairro"]}</div>'
+        f'<div style="font-size: 0.86rem; color: #E2E8F0; font-weight: 600;">{esc(poste.get("logradouro"))}</div>'
+        f'<div style="font-size: 0.78rem; color: #94A3B8; margin-bottom: 12px;">{esc(poste.get("bairro"))}</div>'
         '<div class="kv-list">'
         f'<div class="kv-row"><span class="kv-key">Coordenada atual</span><span class="kv-val mono" style="font-size: 0.78rem;">{texto_atual}</span></div>'
         '</div>'
@@ -159,7 +161,7 @@ def _renderizar_card(poste, candidato) -> None:
     )
 
     if dist_centro > _LIMITE_AVISO_KM:
-        st.warning(f"Este ponto está a {dist_centro:.0f} km do centro de Boa Saúde. Confira se é o poste certo.")
+        st.warning(f"Este ponto está a {dist_centro:.0f} km do centro de {NOME_MUNICIPIO}. Confira se é o poste certo.")
 
     if st.button("Salvar localização", type="primary", use_container_width=True, key="loc_salvar"):
         definir_localizacao_poste(poste["codigo"], lat, lng)
@@ -227,13 +229,13 @@ def renderizar_tela_localizacao() -> None:
                     p
                     for p in base
                     if termo in p["codigo"].lower()
-                    or termo in (p["logradouro"] or "").lower()
-                    or termo in (p["bairro"] or "").lower()
+                    or termo in (p.get("logradouro") or "").lower()
+                    or termo in (p.get("bairro") or "").lower()
                 ]
 
             if base:
                 rotulos = {
-                    f"{p['codigo']} · {(p['logradouro'] or '')[:30]}": p for p in base
+                    f"{p['codigo']} · {(p.get('logradouro') or '')[:30]}": p for p in base
                 }
                 escolha = st.selectbox("Poste", list(rotulos.keys()), key="loc_poste")
                 poste_sel = rotulos[escolha]
@@ -262,7 +264,7 @@ def renderizar_tela_localizacao() -> None:
     with col_mapa:
         st.markdown(
             '<div style="display: flex; justify-content: space-between; align-items: center; background: #0F1724; border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 11px 18px; margin-bottom: 10px;">'
-            '<span style="font-size: 0.82rem; font-weight: 700; color: #F8FAFC;">Satélite &bull; Boa Saúde / RN</span>'
+            f'<span style="font-size: 0.82rem; font-weight: 700; color: #F8FAFC;">Satélite &bull; {NOME_MUNICIPIO}</span>'
             '<span style="font-size: 0.75rem; color: #94A3B8;">Clique no poste &bull; arraste para navegar</span>'
             '</div>',
             unsafe_allow_html=True,
