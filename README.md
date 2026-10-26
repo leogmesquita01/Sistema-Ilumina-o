@@ -22,29 +22,53 @@ O aplicativo abrirá automaticamente no seu navegador em:
 
 ### Configuração do banco (Supabase)
 
-Crie um arquivo `.env` na raiz (use o `.env.example` como modelo) com três variáveis:
+Crie um arquivo `.env` na raiz (use o `.env.example` como modelo):
 
-| Variável | Chave | Uso |
+| Variável | Valor | Uso |
 |---|---|---|
-| `SUPABASE_URL` | — | URL do projeto (não é segredo) |
-| `SUPABASE_KEY` | `sb_publishable_...` | **Leitura** (`anon`), sujeita ao RLS |
-| `SUPABASE_SECRET_KEY` | `sb_secret_...` | **Escrita** (`service_role`), ignora o RLS |
+| `SUPABASE_URL` | `https://...supabase.co` | URL do projeto (não é segredo) |
+| `SUPABASE_KEY` | `sb_publishable_...` | Chave publicável. O login de cada usuário passa por ela |
+| `ILUMINA_MODO_LOCAL` | `0` ou `1` | `1` = só SQLite local, sem login (desenvolvimento) |
 
-A chave secreta é usada apenas pelo Python no servidor (`obter_supabase_admin()`) e
-nunca chega ao navegador. No Streamlit Community Cloud, cadastre as mesmas três em
-**Settings → Secrets**.
+No Streamlit Community Cloud, cadastre as mesmas variáveis em **Settings → Secrets**.
+O app **não usa** a chave secreta (`sb_secret_...`): cada pessoa entra com a própria
+conta e o RLS do banco decide o que ela pode fazer.
 
-A escrita anônima é bloqueada por RLS — as policies vivem em
-[`supabase/migrations/001_rls.sql`](supabase/migrations/001_rls.sql) e devem ser
-aplicadas uma vez no **SQL Editor** do painel Supabase.
+### Primeira configuração do login (uma vez só)
+
+1. No painel do Supabase, abra o **SQL Editor** e rode, nesta ordem:
+   [`001_rls.sql`](supabase/migrations/001_rls.sql) e
+   [`002_login.sql`](supabase/migrations/002_login.sql).
+2. **Authentication → Sign In / Providers → Email**: desligue
+   *"Allow new users to sign up"* (só o administrador cria contas).
+3. **Authentication → Users → Add user**: crie a conta com e-mail e senha e marque
+   *Auto Confirm User*.
+4. Libere a pessoa no sistema rodando no SQL Editor (troque nome e e-mail):
+
+   ```sql
+   insert into public.perfis (id, nome, papel)
+   select id, 'Nome da Pessoa', 'admin' from auth.users where email = 'pessoa@exemplo.com'
+   on conflict (id) do update set nome = excluded.nome, papel = excluded.papel, ativo = true;
+   ```
+
+Uma conta sem linha em `perfis` (ou com `ativo = false`) não consegue ler nem gravar
+nada, mesmo que exista no Auth.
+
+> Recarregar a página (F5) encerra a sessão e pede login de novo.
+
+### Testes
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest
+```
 
 ---
-
 
 ## 🎯 Funcionalidades Principais
 
 1. **Busca Instantânea por Código de Poste:**
-   * Basta digitar o código da plaqueta (ex: `CSR-1001`, `CSR-1004` ou o nome de uma rua) na barra de pesquisa no topo.
+   * Basta digitar o código da plaqueta (ex: `P-01` ou o nome de uma rua) na barra de pesquisa no topo.
    * O mapa navega automaticamente até o local exato e destaca o poste focado.
 
 2. **Mapa Interativo (Ruas, Noturno e Satélite de Alta Resolução):**
@@ -72,6 +96,9 @@ aplicadas uma vez no **SQL Editor** do painel Supabase.
    * Upload de arquivos em **Excel (`.xlsx`, `.xls`)** ou **CSV**.
    * Identifica colunas automaticamente mesmo com nomes variados.
    * Atualiza ou cadastra milhares de postes em lote no Supabase / banco local.
+   * Reimportar é seguro: postes existentes **mantêm o status** (chamados abertos continuam
+     abertos) e **mantêm a localização**, a menos que a planilha traga coordenada válida.
+   * Aceita a exportação do **KoboToolbox** (coleta offline em campo, com GPS).
    * Botão para download de planilha modelo pronta.
 
 6. **GPS em Campo:**
@@ -88,7 +115,7 @@ aplicadas uma vez no **SQL Editor** do painel Supabase.
 ## 📁 Estrutura do Projeto
 
 ```
-Web App Mapa/
+Sistema-Ilumina-o/
 │
 ├── .streamlit/
 │   └── config.toml           # Configurações do tema e servidor Streamlit
@@ -96,12 +123,15 @@ Web App Mapa/
 ├── app/
 │   ├── dashboard/
 │   │   ├── main.py           # Ponto de entrada principal da interface Streamlit
+│   │   ├── sessao.py         # Login (Supabase Auth) e sessão do usuário
+│   │   ├── html_seguro.py    # Escape de texto antes de montar HTML
 │   │   ├── estilos/          # Identidade visual em CSS modular
 │   │   │   ├── base.py       # Reset, fontes, variáveis e layout
 │   │   │   ├── sidebar.py    # Sidebar em ilhas flutuantes
 │   │   │   ├── cards.py      # KPIs, gráficos e cartões
 │   │   │   └── componentes.py # Painéis, tabelas, pills e inputs
 │   │   └── telas/
+│   │       ├── login.py             # Tela de login
 │   │       ├── mapa_postes.py       # Mapa interativo em tempo real
 │   │       ├── solicitar_reparo.py  # Emissão de O.S. e despacho WhatsApp
 │   │       ├── ordens_servico.py    # Gestão e conclusão de chamados
@@ -110,26 +140,31 @@ Web App Mapa/
 │   │       └── localizacao_postes.py # Georreferenciamento no mapa de satélite
 │   │
 │   ├── database/
-│   │   ├── conexao.py        # Conexão Supabase Cloud + fallback SQLite
+│   │   ├── conexao.py        # Supabase (cliente por sessão) ou SQLite no modo local
 │   │   └── paginacao.py      # Paginação das consultas ao PostgREST
 │   │
 │   ├── servicos/
 │   │   ├── dados_postes.py   # Consultas, métricas e cadastro de postes
 │   │   └── ordens_service.py # Gestão de O.S. e formatação de WhatsApp
 │   │
+│   ├── constantes.py         # Status, prioridades e dados do município
 │   ├── cache.py              # Cache TTL em memória, invalidado nas escritas
 │   ├── importer.py           # Leitura e mapeamento de planilhas Excel/CSV
 │   └── fuso.py               # Datas no fuso de Boa Saúde/RN (America/Fortaleza)
 │
 ├── supabase/
 │   └── migrations/
-│       └── 001_rls.sql       # RLS: leitura pública, escrita só via chave secreta
+│       ├── 001_rls.sql       # Liga o RLS nas tabelas
+│       └── 002_login.sql     # Perfis, RLS por usuário, protocolo e status
+│
+├── tests/                    # Testes (pytest)
 │
 ├── data/
-│   └── postes_boasaude.db    # Banco SQLite local de fallback
+│   └── postes_boasaude.db    # Banco SQLite do modo local (ILUMINA_MODO_LOCAL=1)
 │
 ├── .env.example              # Modelo das variáveis de ambiente
-├── requirements.txt          # Dependências do projeto
+├── requirements.txt          # Dependências do projeto (versões fixas)
+├── requirements-dev.txt      # + ferramentas de teste
 └── README.md                 # Documentação
 ```
 
