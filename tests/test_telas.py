@@ -8,14 +8,15 @@ from app.servicos.ordens_service import criar_ordem_servico
 from pathlib import Path
 
 APP = str(Path(__file__).resolve().parent.parent / "app" / "dashboard" / "main.py")
-TELAS = [
-    ":material/map: Mapa e postes",
-    ":material/handyman: Solicitar reparo",
-    ":material/assignment: Ordens de serviço",
-    ":material/add_location_alt: Cadastrar poste",
-    ":material/upload_file: Importar planilha",
-    ":material/edit_location: Localizar",
-]
+TITULOS = {
+    "mapa": "Painel da rede",
+    "reparo": "Solicitar reparo",
+    "ordens": "Ordens de serviço",
+    "cadastro": "Cadastrar poste",
+    "importar": "Importar planilha",
+    "localizar": "Localizar postes",
+}
+TELAS = list(TITULOS)
 
 
 @pytest.fixture
@@ -33,6 +34,8 @@ def test_tela_renderiza(dados, tela):
     at.run()
     assert not at.exception, at.exception
     assert not at.error, [e.value for e in at.error]
+    assert at.session_state["pagina_atual"] == tela
+    assert any(TITULOS[tela] in m.value for m in at.markdown)
 
 
 def test_html_do_banco_e_escapado(dados):

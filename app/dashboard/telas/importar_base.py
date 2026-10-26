@@ -1,12 +1,24 @@
-import streamlit as st
-import pandas as pd
 import io
+
+import pandas as pd
+import streamlit as st
+
 from app.dashboard.html_seguro import esc
+from app.dashboard.ui import html, kpis, painel, painel_topo, tela, topo
 from app.importer import import_poles_file
 
+COLUNAS_ACEITAS = [
+    ("Código *", "CODIGO, PLAQUETA, POSTE, BARRAMENTO"),
+    ("Coordenadas", "LATITUDE, LONGITUDE (inclui o GPS do Kobo)"),
+    ("Endereço", "LOGRADOURO, RUA, BAIRRO, REFERÊNCIA"),
+    ("Luminária", "TIPO_LUMINARIA, POTÊNCIA"),
+    ("Estrutura", "TIPO_POSTE, TIPO_BRACO"),
+    ("Observações", "OBSERVAÇÕES, OBS"),
+]
 
-def renderizar_tela_importar():
-    dados_exemplo = {
+
+def _planilha_modelo() -> bytes:
+    exemplo = pd.DataFrame({
         "CODIGO_POSTE": ["P-001", "P-002", "P-003"],
         "LOGRADOURO": ["Rua Manoel Cirilo", "Travessa São Pedro", "Av. Rio Branco"],
         "BAIRRO": ["Centro", "Centro", "Bela Vista"],
@@ -15,188 +27,70 @@ def renderizar_tela_importar():
         "POTENCIA_WATTS": [100, 70, 150],
         "TIPO_POSTE": ["Concreto Duplo T", "Concreto Circular", "Concreto Duplo T"],
         "TIPO_BRACO": ["Braço Médio 2m", "Braço Curto 1m", "Braço Longo 3m"],
-    }
-    df_exemplo = pd.DataFrame(dados_exemplo)
+    })
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-        df_exemplo.to_excel(writer, index=False, sheet_name="Postes")
-    buffer.seek(0)
+        exemplo.to_excel(writer, index=False, sheet_name="Postes")
+    return buffer.getvalue()
 
-    sidebar_reduzida = st.session_state.get("sidebar_reduzida", False)
-    sb_target = st.session_state.get("sb_card")
 
-    if not sidebar_reduzida and sb_target is not None:
-        with sb_target:
-            st.markdown(
-                '<div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #34D399; margin-bottom: 8px;">Ferramentas de Lote</div>',
-                unsafe_allow_html=True,
-            )
-            st.download_button(
-                label="Baixar Modelo (.xlsx)",
-                data=buffer,
-                file_name="modelo_postes_boasaude.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True,
-                key="dl_modelo_sidebar",
-            )
-            st.markdown(
-                '<div style="background:#0A101A; border:1px solid rgba(255,255,255,0.06); border-radius:14px; padding:10px 12px; margin-top:8px; font-size:0.74rem; color:#94A3B8; line-height:1.45;">'
-                '<div style="color:#F8FAFC; font-weight:600; margin-bottom:4px;">Modo Upsert Ativo</div>'
-                'Códigos já existentes são atualizados sem duplicar registros.'
-                '</div>',
-                unsafe_allow_html=True,
-            )
-    st.markdown(
-        """
-        <div class="command-hero">
-            <div>
-                <div class="hero-badge">
-                    <span class="hero-dot"></span>
-                    Importação em Lote · Planilhas de Campo
-                </div>
-                <h1 class="hero-title">Importar Planilha de Postes</h1>
-                <p class="hero-subtitle">Carregue a relação de postes já anotados pela equipe em Excel ou CSV para alimentar o banco do município.</p>
-            </div>
-            <div class="hero-right">
-                <div style="font-size: 0.72rem; color: #64748B; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700;">Sincronização</div>
-                <div class="mono" style="font-size: 1.02rem; font-weight: 700; color: #10B981; margin-top: 2px;">Upsert por Código</div>
-                <div style="font-size: 0.75rem; color: #94A3B8; margin-top: 2px;">Sem exigir coordenadas</div>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+def _resultado(resultado: dict) -> None:
+    html(kpis([
+        ("Linhas lidas", resultado["total_linhas"], "", ""),
+        ("Salvos / atualizados", resultado["importados"], "", ""),
+        ("Ignorados", resultado["erros"], "", "sem código"),
+    ]))
+    colunas = resultado.get("colunas_identificadas", {})
+    st.caption("Colunas usadas: " + ", ".join(f"{campo} ← “{coluna}”" for campo, coluna in colunas.items()))
+    if resultado.get("duplicados"):
+        st.warning(f"{resultado['duplicados']} código(s) repetido(s) na planilha — valeu a última linha de cada um.")
+    for aviso in resultado.get("detalhes_erros", []):
+        st.caption(f"⚠ {aviso}")
+    st.info(
+        "Postes que já existiam mantiveram a situação (chamados abertos continuam abertos) e a localização, "
+        "a menos que a planilha trouxesse uma coordenada válida."
     )
 
-    c1, c2 = st.columns([1.65, 1.35], gap="medium")
 
-    with c1:
-        st.markdown(
-            """
-            <div class="panel-card">
-                <div class="panel-header">
-                    <span class="panel-title">Upload da Planilha da Equipe</span>
-                    <span class="panel-meta">.XLSX · .XLS · .CSV</span>
-                </div>
-                <div style="font-size: 0.86rem; color: #94A3B8; line-height: 1.5;">
-                    Envie sua planilha com os postes anotados em campo. O sistema reconhece automaticamente as colunas de código, rua, bairro, referência e potência, atualizando o Supabase sem exigir latitude ou longitude.
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
+def renderizar_tela_importar():
+    with tela("importar"):
+        topo(
+            "Importação em lote",
+            "Importar planilha",
+            "Envie a planilha da equipe ou a exportação do Kobo (Excel ou CSV). Códigos que já existem são atualizados, sem duplicar.",
+            meta="upsert por código",
         )
 
-        arquivo = st.file_uploader(
-            "Selecione a planilha de postes (.xlsx, .xls ou .csv)",
-            type=["xlsx", "xls", "csv"],
-        )
+        col_envio, col_ajuda = st.columns([1.6, 1.2], gap="medium")
+        with col_envio:
+            with painel("importar-envio"):
+                painel_topo("Arquivo", ".xlsx · .xls · .csv")
+                arquivo = st.file_uploader("Selecione a planilha de postes", type=["xlsx", "xls", "csv"])
+                if arquivo is not None:
+                    html(
+                        f'<div class="il-nota"><span class="mono">{esc(arquivo.name)}</span> · {arquivo.size / 1024:.1f} KB</div>'
+                    )
+                    if st.button("Processar e salvar postes", type="primary", use_container_width=True):
+                        with st.spinner("Gravando os postes no banco…"):
+                            try:
+                                resultado = import_poles_file(arquivo.read(), arquivo.name)
+                            except Exception as e:
+                                st.error(f"Falha ao processar o arquivo: {e}")
+                            else:
+                                _resultado(resultado)
 
-        if arquivo is not None:
-            st.markdown(
-                f"""
-                <div class="panel-card" style="padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; border-color: rgba(16, 185, 129, 0.35);">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <span class="status-pill positive">Pronto</span>
-                        <span style="font-size: 0.88rem; color: #FFFFFF; font-weight: 600;">{esc(arquivo.name)}</span>
-                    </div>
-                    <span class="mono" style="font-size: 0.78rem; color: #94A3B8;">{arquivo.size / 1024:.1f} KB</span>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-            if st.button("Processar e Salvar Postes na Base", type="primary", use_container_width=True):
-                with st.spinner("Sincronizando registros com o banco de dados..."):
-                    try:
-                        conteudo = arquivo.read()
-                        resultado = import_poles_file(conteudo, arquivo.name)
-
-                        resumo_html = (
-                            '<div class="panel-card" style="border-color: #10B981; margin-top: 14px;">'
-                            '<div class="panel-header">'
-                            '<span class="panel-title">Resumo da Importação</span>'
-                            '<span class="status-pill positive">Concluído</span>'
-                            '</div>'
-                            '<div class="spec-grid" style="grid-template-columns: repeat(3, 1fr);">'
-                            '<div class="spec-tile">'
-                            '<div class="spec-tile-label">Linhas Lidas</div>'
-                            f'<div class="spec-tile-val mono">{resultado["total_linhas"]}</div>'
-                            '</div>'
-                            '<div class="spec-tile">'
-                            '<div class="spec-tile-label">Salvos / Atualizados</div>'
-                            f'<div class="spec-tile-val mono" style="color: #34D399;">{resultado["importados"]}</div>'
-                            '</div>'
-                            '<div class="spec-tile">'
-                            '<div class="spec-tile-label">Ignorados</div>'
-                            f'<div class="spec-tile-val mono">{resultado["erros"]}</div>'
-                            '</div>'
-                            '</div>'
-                            '</div>'
-                        )
-                        st.markdown(resumo_html, unsafe_allow_html=True)
-
-                        colunas = resultado.get("colunas_identificadas", {})
-                        st.caption(
-                            "Colunas usadas: "
-                            + ", ".join(f"{campo} ← “{coluna}”" for campo, coluna in colunas.items())
-                        )
-                        if resultado.get("duplicados"):
-                            st.warning(f"{resultado['duplicados']} código(s) repetido(s) na planilha — valeu a última linha de cada um.")
-                        for aviso in resultado.get("detalhes_erros", []):
-                            st.caption(f"⚠️ {aviso}")
-                        st.info(
-                            "Postes que já existiam mantiveram o status (chamados abertos continuam abertos) "
-                            "e a localização, a menos que a planilha trouxesse uma coordenada válida."
-                        )
-                    except Exception as e:
-                        st.error(f"Falha ao processar arquivo: {str(e)}")
-
-    with c2:
-        st.markdown(
-            """
-            <div class="panel-card">
-                <div class="panel-header">
-                    <span class="panel-title">Colunas Reconhecidas</span>
-                    <span class="panel-meta">Auto-Detect</span>
-                </div>
-                <table class="clean-table">
-                    <thead>
-                        <tr>
-                            <th>Campo</th>
-                            <th>Cabeçalhos Aceitos</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><strong>Código</strong> <span style="color: #FB7185;">*</span></td>
-                            <td class="mono" style="font-size: 0.76rem; color: #94A3B8;">CODIGO, POSTE, PLAQUETA, BARRAMENTO</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Localização</strong></td>
-                            <td class="mono" style="font-size: 0.76rem; color: #94A3B8;">LOGRADOURO, RUA, BAIRRO, REF</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Coordenadas</strong></td>
-                            <td class="mono" style="font-size: 0.76rem; color: #94A3B8;">LATITUDE, LONGITUDE (inclui GPS do Kobo)</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Luminária</strong></td>
-                            <td class="mono" style="font-size: 0.76rem; color: #94A3B8;">TIPO_LUMINARIA, POTENCIA</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Estrutura</strong></td>
-                            <td class="mono" style="font-size: 0.76rem; color: #94A3B8;">TIPO_POSTE, TIPO_BRACO</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        st.download_button(
-            label="Baixar Planilha Modelo (.xlsx)",
-            data=buffer,
-            file_name="modelo_postes_boasaude.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True,
-        )
+        with col_ajuda:
+            with painel("importar-colunas"):
+                painel_topo("Colunas reconhecidas", "automático")
+                linhas = "".join(
+                    f"<tr><td><strong>{esc(campo)}</strong></td><td class=\"mono\">{esc(aceitas)}</td></tr>"
+                    for campo, aceitas in COLUNAS_ACEITAS
+                )
+                html(f'<div class="il-sem-margem il-tabela-box"><table class="il-tabela"><tbody>{linhas}</tbody></table></div>')
+                st.download_button(
+                    "Baixar planilha modelo (.xlsx)",
+                    data=_planilha_modelo(),
+                    file_name="modelo_postes.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True,
+                )

@@ -76,9 +76,10 @@ python -m pytest
    * Alternância entre mapa de ruas (OpenStreetMap), modo noturno (Dark) e satélite (Esri World Imagery).
    * Agrupamento de marcadores (*clusters*) para alta performance mesmo com milhares de postes.
    * Cores indicativas de status:
-     * 🟢 **Verde:** Funcionando normalmente
-     * 🟡 **Amarelo:** Chamado de reparo aberto
-     * 🔴 **Vermelho:** Defeito urgente (risco de curto, 24h aceso ou áreas prioritárias)
+     * ⬛ **Preto:** Funcionando normalmente
+     * 🟧 **Âmbar:** Chamado de reparo aberto
+     * 🟥 **Vermelho:** Defeito urgente (risco de curto, 24h aceso ou áreas prioritárias)
+   * Situação sempre escrita ao lado da cor (legível para quem não distingue cores).
 
 3. **Ficha Completa do Poste:**
    * Código da plaqueta da concessionária.
@@ -149,11 +150,9 @@ Sistema-Ilumina-o/
 │   │   ├── main.py           # Ponto de entrada principal da interface Streamlit
 │   │   ├── sessao.py         # Login (Supabase Auth) e sessão do usuário
 │   │   ├── html_seguro.py    # Escape de texto antes de montar HTML
-│   │   ├── estilos/          # Identidade visual em CSS modular
-│   │   │   ├── base.py       # Reset, fontes, variáveis e layout
-│   │   │   ├── sidebar.py    # Sidebar em ilhas flutuantes
-│   │   │   ├── cards.py      # KPIs, gráficos e cartões
-│   │   │   └── componentes.py # Painéis, tabelas, pills e inputs
+│   │   ├── ui.py             # Peças de interface (títulos, indicadores, painéis, status)
+│   │   ├── estilos/
+│   │   │   └── tema.py       # Tema "prancheta técnica" + animações de entrada (CSS)
 │   │   └── telas/
 │   │       ├── login.py             # Tela de login
 │   │       ├── mapa_postes.py       # Mapa interativo em tempo real
