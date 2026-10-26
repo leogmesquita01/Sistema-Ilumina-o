@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import io
+from app.dashboard.html_seguro import esc
 from app.importer import import_poles_file
 
 
@@ -95,7 +96,7 @@ def renderizar_tela_importar():
                 <div class="panel-card" style="padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; border-color: rgba(16, 185, 129, 0.35);">
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <span class="status-pill positive">Pronto</span>
-                        <span style="font-size: 0.88rem; color: #FFFFFF; font-weight: 600;">{arquivo.name}</span>
+                        <span style="font-size: 0.88rem; color: #FFFFFF; font-weight: 600;">{esc(arquivo.name)}</span>
                     </div>
                     <span class="mono" style="font-size: 0.78rem; color: #94A3B8;">{arquivo.size / 1024:.1f} KB</span>
                 </div>
@@ -132,6 +133,20 @@ def renderizar_tela_importar():
                             '</div>'
                         )
                         st.markdown(resumo_html, unsafe_allow_html=True)
+
+                        colunas = resultado.get("colunas_identificadas", {})
+                        st.caption(
+                            "Colunas usadas: "
+                            + ", ".join(f"{campo} ← “{coluna}”" for campo, coluna in colunas.items())
+                        )
+                        if resultado.get("duplicados"):
+                            st.warning(f"{resultado['duplicados']} código(s) repetido(s) na planilha — valeu a última linha de cada um.")
+                        for aviso in resultado.get("detalhes_erros", []):
+                            st.caption(f"⚠️ {aviso}")
+                        st.info(
+                            "Postes que já existiam mantiveram o status (chamados abertos continuam abertos) "
+                            "e a localização, a menos que a planilha trouxesse uma coordenada válida."
+                        )
                     except Exception as e:
                         st.error(f"Falha ao processar arquivo: {str(e)}")
 
@@ -153,11 +168,15 @@ def renderizar_tela_importar():
                     <tbody>
                         <tr>
                             <td><strong>Código</strong> <span style="color: #FB7185;">*</span></td>
-                            <td class="mono" style="font-size: 0.76rem; color: #94A3B8;">CODIGO, POSTE, PLAQUETA, ID</td>
+                            <td class="mono" style="font-size: 0.76rem; color: #94A3B8;">CODIGO, POSTE, PLAQUETA, BARRAMENTO</td>
                         </tr>
                         <tr>
                             <td><strong>Localização</strong></td>
                             <td class="mono" style="font-size: 0.76rem; color: #94A3B8;">LOGRADOURO, RUA, BAIRRO, REF</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Coordenadas</strong></td>
+                            <td class="mono" style="font-size: 0.76rem; color: #94A3B8;">LATITUDE, LONGITUDE (inclui GPS do Kobo)</td>
                         </tr>
                         <tr>
                             <td><strong>Luminária</strong></td>
