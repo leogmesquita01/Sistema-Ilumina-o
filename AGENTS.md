@@ -1,5 +1,12 @@
 # AGENTS.md — convenções do projeto
 
+Vale para qualquer agente (Claude Code, Antigravity, Codex…). O `CLAUDE.md` só
+importa este arquivo.
+
+## Como trabalhar comigo (Leonardo)
+
+- Responder em português do Brasil, de forma direta.
+
 ## Commits
 
 - **Sempre commitar** ao concluir qualquer alteração. Nunca deixar trabalho apenas
@@ -9,6 +16,8 @@
 - Mensagens em português, no padrão `tipo(escopo): resumo`
   (`feat`, `fix`, `perf`, `refactor`, `docs`, `style`, `chore`).
 - **Não fazer `push`** sem pedido explícito: o repositório é público.
+- Autor dos commits é só o Leonardo: **sem** linha `Co-Authored-By`,
+  `Generated with` ou qualquer outra atribuição a agente/IA, em commit ou PR.
 
 ## Segredos
 
