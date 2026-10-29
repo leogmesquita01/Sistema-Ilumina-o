@@ -40,7 +40,7 @@ conta e o RLS do banco decide o que ela pode fazer.
 1. No painel do Supabase, abra o **SQL Editor** e rode, nesta ordem, os arquivos de
    [`supabase/migrations/`](supabase/migrations/): `000_esquema_base.sql` (só em banco
    novo — cria as tabelas), `001_rls.sql`, `002_login.sql`, `003_ajustes_seguranca.sql`
-   `004_ajustes_auditoria.sql` e `005_area_admin.sql`. Todos podem ser rodados de novo sem erro.
+   `004_ajustes_auditoria.sql`, `005_area_admin.sql` e `006_revoga_funcoes_gatilho.sql`. Todos podem ser rodados de novo sem erro.
 2. **Authentication → Sign In / Providers → Email**: desligue
    *"Allow new users to sign up"* (só o administrador cria contas).
 3. **Authentication → Users → Add user**: crie a conta com e-mail e senha e marque
@@ -203,7 +203,8 @@ Sistema-Ilumina-o/
 │       ├── 002_login.sql             # Perfis, RLS por usuário, protocolo e status
 │       ├── 003_ajustes_seguranca.sql # Avisos do Security Advisor
 │       ├── 004_ajustes_auditoria.sql # Código sem caixa, protocolo, permissões
-│       └── 005_area_admin.sql        # Área do admin: equipe, ações sensíveis, histórico
+│       ├── 005_area_admin.sql        # Área do admin: equipe, ações sensíveis, histórico
+│       └── 006_revoga_funcoes_gatilho.sql # Funções de gatilho fora da API
 │
 ├── kobo/                     # Formulário do KoboToolbox (coleta offline)
 │   ├── gerar_formulario.py   # Gera o XLSForm a partir das constantes
