@@ -76,6 +76,7 @@ st.session_state["nav_principal"] = st.session_state["pagina_atual"]
 
 def _ao_trocar_tela() -> None:
     st.session_state["pagina_atual"] = st.session_state["nav_principal"]
+    st.session_state.pop("reparo_emitida", None)  # voltar ao reparo abre formulário novo
 
 
 # ---- Cabeçalho: marca · menu · quem está logado ------------------------------

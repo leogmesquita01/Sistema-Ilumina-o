@@ -48,7 +48,6 @@ PENDENTES = {
     "test_qa058_cache_global_entre_sessoes": "AUD-07 cache entre sessões",
     "test_qa066_import_supabase_falha_no_meio_nao_e_atomica": "AUD-05 importação parcial",
     "test_qa072_criar_os_sem_protocolo_nao_deixa_os_orfa": "AUD-05 O.S. órfã",
-    "test_qa075_concluir_duas_vezes_update_filtra_status": "AUD-05 conclusão dupla",
     "test_qa076_update_sem_linha_afetada_e_silencioso": "AUD-13 UPDATE silencioso",
     "test_qa079_criar_os_falha_ao_recalcular_status": "AUD-05 status do poste",
     "test_qa081_listar_postes_or_caracteres_especiais": "AUD-20 curingas na busca",

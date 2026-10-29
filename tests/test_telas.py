@@ -83,3 +83,25 @@ def test_poste_vindo_da_ficha_e_usado_uma_vez(dados):
     at.run()
     assert at.selectbox(key="reparo_poste").value.startswith("P-01")
     assert "poste_selecionado_os" not in at.session_state
+
+
+def test_emitir_os_nao_deixa_reenviar_o_mesmo_formulario(dados):
+    from app.servicos.ordens_service import listar_ordens
+
+    antes = len(listar_ordens())
+    at = AppTest.from_file(APP, default_timeout=120)
+    at.session_state["pagina_atual"] = "reparo"
+    at.session_state["poste_selecionado_os"] = "P-02"
+    at.run()
+    next(b for b in at.button if b.label == "Emitir ordem de serviço").click()
+    at.run()
+    assert not at.exception and not at.error
+    # depois de emitir só há a confirmação: nenhum botão "Emitir" para um 2º clique
+    assert not any(b.label == "Emitir ordem de serviço" for b in at.button)
+    assert any("Ordem de serviço emitida" in m.value for m in at.markdown)
+    from app.cache import limpar_cache
+    limpar_cache()
+    assert len(listar_ordens()) == antes + 1
+    next(b for b in at.button if b.label == "Emitir outra O.S.").click()
+    at.run()
+    assert any(b.label == "Emitir ordem de serviço" for b in at.button)

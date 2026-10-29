@@ -198,10 +198,12 @@ def concluir_ordem_servico(protocolo: str) -> None:
         if not res.data:
             return
         codigo_poste = res.data[0]["codigo_poste"]
+        # Só baixa O.S. ainda aberta: um segundo clique (ou outra aba) não
+        # reescreve a data da primeira conclusão.
         sb.table("ordens_servico").update({
             "status": OS_CONCLUIDA,
             "data_conclusao": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        }).eq("protocolo", protocolo).execute()
+        }).eq("protocolo", protocolo).eq("status", OS_ABERTA).execute()
     else:
         conn = obter_conexao()
         row = conn.execute("SELECT codigo_poste FROM ordens_servico WHERE protocolo = ?;", (protocolo,)).fetchone()
@@ -210,8 +212,9 @@ def concluir_ordem_servico(protocolo: str) -> None:
             return
         codigo_poste = row["codigo_poste"]
         conn.execute(
-            "UPDATE ordens_servico SET status = ?, data_conclusao = CURRENT_TIMESTAMP WHERE protocolo = ?;",
-            (OS_CONCLUIDA, protocolo),
+            "UPDATE ordens_servico SET status = ?, data_conclusao = CURRENT_TIMESTAMP "
+            "WHERE protocolo = ? AND status = ?;",
+            (OS_CONCLUIDA, protocolo, OS_ABERTA),
         )
         conn.commit()
         conn.close()

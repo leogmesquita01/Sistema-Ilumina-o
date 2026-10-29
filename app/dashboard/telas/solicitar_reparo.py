@@ -61,8 +61,37 @@ def _escolher_poste(todos_postes: list):
     return poste, False
 
 
+def _confirmacao(emitida: dict) -> None:
+    if emitida.get("aviso"):
+        st.info(emitida["aviso"])
+    with painel("reparo-ok"):
+        html(
+            '<div class="il-confirmacao">'
+            '<span class="il-kicker">Ordem de serviço emitida</span>'
+            f'<span class="il-codigo">{esc(emitida["protocolo"])}</span>'
+            f'<span>Poste <span class="mono">{esc(emitida["codigo"])}</span> atualizado na base. '
+            "Envie o despacho para o eletricista:</span>"
+            "</div>"
+        )
+        b1, b2, _ = st.columns([1.4, 1.2, 2])
+        with b1:
+            st.link_button("Enviar despacho no WhatsApp", emitida["zap_url"], type="primary", use_container_width=True)
+        with b2:
+            if st.button("Emitir outra O.S.", key="reparo_outra", use_container_width=True):
+                st.session_state.pop("reparo_emitida", None)
+                st.rerun()
+
+
 def renderizar_tela_solicitar_reparo():
     with tela("reparo"):
+        # Depois de emitir, mostra só a confirmação: o formulário preenchido na tela
+        # deixava um segundo clique em "Emitir" criar uma O.S. duplicada.
+        emitida = st.session_state.get("reparo_emitida")
+        if emitida:
+            topo("Despacho de campo", "Solicitar reparo")
+            _confirmacao(emitida)
+            return
+
         todos_postes = listar_postes()
         topo(
             "Despacho de campo",
@@ -127,6 +156,7 @@ def renderizar_tela_solicitar_reparo():
         if not submeter:
             return
 
+        aviso = None
         if not modo_novo_poste and not poste:
             st.error("Escolha o poste do reparo antes de emitir a ordem de serviço.")
             return
@@ -139,7 +169,7 @@ def renderizar_tela_solicitar_reparo():
             if existente:
                 # "p-01" digitado quando já existe "P-01": a O.S. vai para o poste que
                 # existe, com os dados dele (antes gravava "p-01" e quebrava a FK).
-                st.info(f"O poste {existente['codigo']} já estava cadastrado; a O.S. foi aberta nele.")
+                aviso = f"O poste {existente['codigo']} já estava cadastrado; a O.S. foi aberta nele."
                 poste = existente
             else:
                 cod_alvo = novo_codigo.strip()
@@ -182,12 +212,5 @@ def renderizar_tela_solicitar_reparo():
             latitude=lat_alvo, longitude=lng_alvo, materiais=materiais,
         )
 
-        with painel("reparo-ok"):
-            html(
-                '<div class="il-confirmacao">'
-                '<span class="il-kicker">Ordem de serviço emitida</span>'
-                f'<span class="il-codigo">{esc(protocolo)}</span>'
-                f'<span>Poste <span class="mono">{esc(cod_alvo)}</span> atualizado na base. Envie o despacho para o eletricista:</span>'
-                "</div>"
-            )
-            st.link_button("Enviar despacho no WhatsApp", zap_url, type="primary")
+        st.session_state["reparo_emitida"] = {"protocolo": protocolo, "codigo": cod_alvo, "zap_url": zap_url, "aviso": aviso}
+        st.rerun()

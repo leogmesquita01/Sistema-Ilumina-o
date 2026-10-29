@@ -102,4 +102,5 @@ def vazio(titulo: str, texto: str) -> str:
 def ir_para(pagina: str) -> None:
     """Troca de tela a partir de um botão (o menu lê ``pagina_atual``)."""
     st.session_state["pagina_atual"] = pagina
+    st.session_state.pop("reparo_emitida", None)  # voltar ao reparo abre formulário novo
     st.rerun()
