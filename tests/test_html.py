@@ -30,6 +30,7 @@ def test_mapa_nao_leva_payload_js_dos_dados(monkeypatch):
         [-6.15, -35.6], 15, "Ruas",
     )
     html = capturado["html"]
-    for valor in payloads.values():
-        assert valor not in html
-    assert "${alert" not in html and "`+alert" not in html
+    # Os textos só podem aparecer como strings JSON (entre aspas duplas) na linha
+    # de dados do FastMarkerCluster — nunca dentro de HTML ou de template literal.
+    linhas = [l for l in html.splitlines() if "alert(" in l or "LED${x}" in l]
+    assert len(linhas) == 1 and linhas[0].strip().startswith("var data = [[")

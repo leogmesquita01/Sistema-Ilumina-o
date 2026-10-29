@@ -336,10 +336,9 @@ def test_qa047_mapa_5000_postes_medicao(monkeypatch):
     postes = [{"codigo": f"P{i}", "logradouro": "Rua", "bairro": "B", "status": "normal",
                "latitude": -6.1 - i * 1e-5, "longitude": -35.6, "tipo_luminaria": "LED", "potencia": 100}
               for i in range(5000)]
-    cap = {}
-    monkeypatch.setattr(cm.components, "html", lambda h, height=None: cap.setdefault("h", h))
+    cm._guardados.clear()
     t0 = time.perf_counter()
-    cm.renderizar_mapa_folium(postes, [-6.15, -35.6], 15, "Ruas")
+    html = cm.gerar_html_mapa(postes, [-6.15, -35.6], 15, "Ruas")
     dt = time.perf_counter() - t0
-    print(f"MAPA 5000 postes: {dt:.2f}s, HTML {len(cap['h']) / 1e6:.1f} MB")
-    assert dt < 30
+    print(f"MAPA 5000 postes: {dt:.2f}s, HTML {len(html) / 1e6:.1f} MB")
+    assert dt < 3 and len(html) < 2_000_000  # antes da correção: ~8 s e 8,9 MB

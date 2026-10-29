@@ -15,9 +15,8 @@ CARGA = "${globalThis.PWN=String.fromCharCode(88,83,83)}"
 
 def _html_mapa(monkeypatch, poste):
     capturado = {}
-    monkeypatch.setattr(cm.components, "html", lambda h, height=None: capturado.setdefault("h", h))
-    cm.renderizar_mapa_folium([poste], [-6.15, -35.61], 15, "Ruas")
-    return capturado["h"]
+    cm._guardados.clear()
+    return cm.gerar_html_mapa([poste], [-6.15, -35.61], 15, "Ruas")
 
 
 @pytest.mark.defeito("DEF-10")
@@ -28,8 +27,9 @@ def test_qa090_template_literal_no_popup_nao_executa(monkeypatch, campo):
              "latitude": -6.15, "longitude": -35.61, "tipo_luminaria": "LED", "potencia": 100}
     poste[campo] = CARGA
     h = _html_mapa(monkeypatch, poste)
-    linha = next(l.strip() for l in h.splitlines() if l.strip().startswith("var html_"))
-    literal = linha[linha.index("$(") + 2:linha.rindex(")[0]")]
-    saida = subprocess.run(["node", "-e", f"const s={literal}; console.log(String(globalThis.PWN))"],
+    # Desde a correção do mapa, os textos do banco vão como dados JSON do
+    # FastMarkerCluster; avalia essa linha e confirma que nada foi executado.
+    linha = next(l.strip() for l in h.splitlines() if l.strip().startswith("var data = "))
+    saida = subprocess.run(["node", "-e", f"{linha} console.log(String(globalThis.PWN))"],
                            capture_output=True, text=True, timeout=30)
     assert saida.stdout.strip() != "XSS", f"JS executado a partir do campo {campo!r}"
