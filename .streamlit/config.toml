@@ -13,4 +13,9 @@ port = 8501
 # abrir um WebSocket no app local e disparar ações — inclusive gravações no banco.
 enableCORS = true
 enableXsrfProtection = true
-runOnSave = true
+# Em produção o app não deve se recarregar sozinho quando um arquivo muda.
+runOnSave = false
+
+[client]
+# Exceção não tratada mostra só o tipo do erro, não o traceback com caminhos e código.
+showErrorDetails = "type"
