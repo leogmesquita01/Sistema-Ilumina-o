@@ -11,7 +11,8 @@ Para iniciar o sistema localmente via Streamlit:
 
 ```bash
 # 1. Ativar o ambiente virtual (se estiver usando venv):
-.\.venv\Scripts\activate
+.\.venv\Scripts\activate        # Windows
+source .venv/bin/activate        # Linux / macOS
 
 # 2. Iniciar o dashboard Streamlit:
 streamlit run app/dashboard/main.py
@@ -36,9 +37,10 @@ conta e o RLS do banco decide o que ela pode fazer.
 
 ### Primeira configuração do login (uma vez só)
 
-1. No painel do Supabase, abra o **SQL Editor** e rode, nesta ordem:
-   [`001_rls.sql`](supabase/migrations/001_rls.sql) e
-   [`002_login.sql`](supabase/migrations/002_login.sql).
+1. No painel do Supabase, abra o **SQL Editor** e rode, nesta ordem, os arquivos de
+   [`supabase/migrations/`](supabase/migrations/): `000_esquema_base.sql` (só em banco
+   novo — cria as tabelas), `001_rls.sql`, `002_login.sql`, `003_ajustes_seguranca.sql`
+   e `004_ajustes_auditoria.sql`. Todos podem ser rodados de novo sem erro.
 2. **Authentication → Sign In / Providers → Email**: desligue
    *"Allow new users to sign up"* (só o administrador cria contas).
 3. **Authentication → Users → Add user**: crie a conta com e-mail e senha e marque
@@ -54,7 +56,8 @@ conta e o RLS do banco decide o que ela pode fazer.
 Uma conta sem linha em `perfis` (ou com `ativo = false`) não consegue ler nem gravar
 nada, mesmo que exista no Auth.
 
-> Recarregar a página (F5) encerra a sessão e pede login de novo.
+> Recarregar a página (F5) encerra a sessão e pede login de novo. O token é renovado
+> enquanto a aba está em uso; uma aba parada por muito tempo pede login de novo.
 
 ### Testes
 
@@ -62,6 +65,11 @@ nada, mesmo que exista no Auth.
 pip install -r requirements-dev.txt
 python -m pytest
 ```
+
+Os testes rodam sem internet: o modo local usa um SQLite temporário e
+`tests/auditoria/` simula o Supabase com um cliente falso
+(`tests/auditoria/fake_supabase.py`). Defeitos conhecidos e ainda não corrigidos
+ficam listados em `PENDENTES` (`tests/auditoria/conftest.py`) como *xfail* estrito.
 
 ---
 
@@ -173,12 +181,16 @@ Sistema-Ilumina-o/
 │   ├── constantes.py         # Status, prioridades e dados do município
 │   ├── cache.py              # Cache TTL em memória, invalidado nas escritas
 │   ├── importer.py           # Leitura e mapeamento de planilhas Excel/CSV
-│   └── fuso.py               # Datas no fuso de Boa Saúde/RN (America/Fortaleza)
+│   ├── fuso.py               # Datas no fuso de Boa Saúde/RN (America/Fortaleza)
+│   └── erros.py              # Erros do banco traduzidos para o usuário
 │
 ├── supabase/
 │   └── migrations/
-│       ├── 001_rls.sql       # Liga o RLS nas tabelas
-│       └── 002_login.sql     # Perfis, RLS por usuário, protocolo e status
+│       ├── 000_esquema_base.sql      # Tabelas postes e ordens_servico
+│       ├── 001_rls.sql               # Liga o RLS nas tabelas
+│       ├── 002_login.sql             # Perfis, RLS por usuário, protocolo e status
+│       ├── 003_ajustes_seguranca.sql # Avisos do Security Advisor
+│       └── 004_ajustes_auditoria.sql # Código sem caixa, protocolo, permissões
 │
 ├── kobo/                     # Formulário do KoboToolbox (coleta offline)
 │   ├── gerar_formulario.py   # Gera o XLSForm a partir das constantes
