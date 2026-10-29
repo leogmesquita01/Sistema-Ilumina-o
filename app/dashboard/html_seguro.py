@@ -17,3 +17,15 @@ def esc(valor: Any, padrao: str = "—") -> str:
     if not texto.strip():
         return html.escape(padrao)
     return html.escape(texto)
+
+
+# Caracteres que o ``html.escape`` deixa passar, mas que quebram um *template
+# literal* JavaScript (texto entre crases). O folium coloca o HTML dos popups e
+# tooltips dentro de crases: ``${alert(1)}`` num código de poste seria executado.
+# Como entidades HTML, eles aparecem iguais na tela e não são avaliados pelo JS.
+_JS_TEMPLATE = str.maketrans({"`": "&#96;", "$": "&#36;", "\\": "&#92;"})
+
+
+def esc_js(valor: Any, padrao: str = "—") -> str:
+    """Como :func:`esc`, mas seguro também dentro de template literal JS (mapa folium)."""
+    return esc(valor, padrao).translate(_JS_TEMPLATE)

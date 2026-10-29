@@ -3,7 +3,7 @@ from folium import plugins
 import streamlit.components.v1 as components
 
 from app.constantes import STATUS_CHAMADO, eh_urgente
-from app.dashboard.html_seguro import esc
+from app.dashboard.html_seguro import esc_js
 from app.servicos.dados_postes import localizacao_pendente
 
 URL_ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
@@ -50,17 +50,21 @@ def renderizar_mapa_folium(postes: list, centro_mapa: list, zoom_inicial: int, c
         cor, icone, rotulo = _aparencia(p["status"])
         popup_html = (
             '<div style="font-family: \'IBM Plex Sans\', system-ui, sans-serif; min-width: 190px; color: #15171A;">'
-            f'<div style="font-family: \'IBM Plex Mono\', monospace; font-weight: 600; font-size: 13px; margin-bottom: 2px;">{esc(p["codigo"])}</div>'
-            f'<div style="font-size: 12px; color: #3F4448; margin-bottom: 6px;">{esc(p.get("logradouro"))} · {esc(p.get("bairro"))}</div>'
+            f'<div style="font-family: \'IBM Plex Mono\', monospace; font-weight: 600; font-size: 13px; margin-bottom: 2px;">{esc_js(p["codigo"])}</div>'
+            f'<div style="font-size: 12px; color: #3F4448; margin-bottom: 6px;">{esc_js(p.get("logradouro"))} · {esc_js(p.get("bairro"))}</div>'
             '<div style="border-top: 1px solid #E7E9E4; padding-top: 6px; font-size: 12px;">'
-            f'Luminária: <b>{esc(p.get("tipo_luminaria"))} {esc(p.get("potencia") or 100)} W</b><br>'
+            f'Luminária: <b>{esc_js(p.get("tipo_luminaria"))} {esc_js(p.get("potencia") or 100)} W</b><br>'
             f"Situação: <b>{rotulo}</b></div></div>"
         )
         folium.Marker(
             location=[p["latitude"], p["longitude"]],
             popup=folium.Popup(popup_html, max_width=260),
-            tooltip=esc(f"{p['codigo']} · {p.get('logradouro') or '—'}"),
+            tooltip=esc_js(f"{p['codigo']} · {p.get('logradouro') or '—'}"),
             icon=folium.Icon(color=cor, icon=icone, prefix="fa"),
         ).add_to(cluster)
 
-    components.html(m.get_root().render(), height=ALTURA_MAPA)
+    _exibir_html(m.get_root().render(), ALTURA_MAPA)
+
+
+def _exibir_html(conteudo: str, altura: int) -> None:
+    components.html(conteudo, height=altura)
