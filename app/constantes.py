@@ -34,6 +34,9 @@ NOME_MUNICIPIO = "Boa Saúde"
 UF_MUNICIPIO = "RN"
 CENTRO_MUNICIPIO = (-6.1611, -35.6025)
 
+# --- Mapas -------------------------------------------------------------------
+URL_SATELITE = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+
 # --- Opções de cadastro (tela "Cadastrar poste" e formulário do Kobo) -------
 LUMINARIAS = ["LED", "Vapor de Sódio", "Vapor de Mercúrio", "Sem Luminária"]
 ESTRUTURAS = ["Concreto Duplo T", "Concreto Circular", "Madeira Tratada", "Metálico"]

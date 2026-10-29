@@ -338,11 +338,12 @@ def test_qa075_concluir_duas_vezes_update_filtra_status(supabase_fake):
 def test_qa076_update_sem_linha_afetada_e_silencioso(supabase_fake):
     """RLS que filtra o UPDATE (perfil desativado durante a sessão) devolve 0 linhas sem erro:
     concluir_ordem_servico/atualizar_status/definir_localizacao não verificam res.data."""
+    from app.erros import NadaGravado
     from app.servicos.dados_postes import definir_localizacao_poste
 
     supabase_fake.tabelas["postes"] = [_poste("P-01")]
     supabase_fake.update_vazio = True
-    with pytest.raises(Exception):
+    with pytest.raises(NadaGravado):
         definir_localizacao_poste("P-01", -6.15, -35.61)
 
 

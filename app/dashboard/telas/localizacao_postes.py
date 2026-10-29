@@ -10,20 +10,15 @@ import folium
 import streamlit as st
 from streamlit_folium import st_folium
 
-from app.constantes import NOME_MUNICIPIO
+from app.constantes import CENTRO_MUNICIPIO, NOME_MUNICIPIO, URL_SATELITE
 from app.dashboard.html_seguro import esc
 from app.dashboard.ui import html, kpis, kv, painel, painel_topo, tela, topo, vazio
 from app.servicos.dados_postes import (
-    COORDENADA_PADRAO,
     definir_localizacao_poste,
     listar_postes,
     localizacao_pendente,
 )
 
-_URL_ESRI = (
-    "https://server.arcgisonline.com/ArcGIS/rest/services/"
-    "World_Imagery/MapServer/tile/{z}/{y}/{x}"
-)
 _ZOOM_PADRAO = 16
 _RAIO_TERRA_KM = 6371.0
 _LIMITE_AVISO_KM = 30.0
@@ -51,10 +46,10 @@ def _renderizar_mapa(poste, candidato):
     if candidato:
         centro = (candidato["lat"], candidato["lng"])
     if centro is None:
-        centro = COORDENADA_PADRAO
+        centro = CENTRO_MUNICIPIO
 
     mapa = folium.Map(location=list(centro), zoom_start=_ZOOM_PADRAO, tiles=None, control_scale=True)
-    folium.TileLayer(tiles=_URL_ESRI, attr="Esri World Imagery", name="Satélite", show=True).add_to(mapa)
+    folium.TileLayer(tiles=URL_SATELITE, attr="Esri World Imagery", name="Satélite", show=True).add_to(mapa)
     folium.TileLayer(tiles="OpenStreetMap", name="Ruas", show=False).add_to(mapa)
     folium.LayerControl(position="topright", collapsed=False).add_to(mapa)
 
@@ -100,7 +95,7 @@ def _lado(poste, candidato) -> None:
         return
 
     lat, lng = candidato["lat"], candidato["lng"]
-    dist_centro = _distancia_km(COORDENADA_PADRAO[0], COORDENADA_PADRAO[1], lat, lng)
+    dist_centro = _distancia_km(CENTRO_MUNICIPIO[0], CENTRO_MUNICIPIO[1], lat, lng)
     linhas = [("Novo ponto", f"{lat:.6f}, {lng:.6f}")]
     if atual:
         deslocamento = _distancia_km(atual[0], atual[1], lat, lng)

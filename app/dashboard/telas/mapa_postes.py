@@ -2,6 +2,7 @@
 import streamlit as st
 
 from app.constantes import (
+    CENTRO_MUNICIPIO,
     OS_ABERTA,
     PRIORIDADE_URGENTE,
     STATUS_CHAMADO,
@@ -26,7 +27,6 @@ from app.dashboard.ui import (
 )
 from app.fuso import agora_local, para_local
 from app.servicos.dados_postes import (
-    COORDENADA_PADRAO,
     listar_postes,
     localizacao_pendente,
     obter_poste_por_codigo,
@@ -206,7 +206,7 @@ def renderizar_tela_mapa() -> None:
                 st.session_state["mapa_foco"] = foco["codigo"] if foco else st.session_state.get("mapa_foco")
 
                 localizavel = foco is not None and not localizacao_pendente(foco)
-                centro = [foco["latitude"], foco["longitude"]] if localizavel else list(COORDENADA_PADRAO)
+                centro = [foco["latitude"], foco["longitude"]] if localizavel else list(CENTRO_MUNICIPIO)
                 renderizar_mapa_folium(postes, centro, 18 if localizavel else 15, camada)
                 html(
                     '<div class="il-painel-rodape"><div class="il-legenda">'

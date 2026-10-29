@@ -199,7 +199,7 @@ Sistema-Ilumina-o/
 ├── tests/                    # Testes (pytest)
 │
 ├── data/
-│   └── postes_boasaude.db    # Banco SQLite do modo local (ILUMINA_MODO_LOCAL=1)
+│   └── postes_boasaude.db    # SQLite do modo local (criado ao rodar com ILUMINA_MODO_LOCAL=1; fora do Git)
 │
 ├── .env.example              # Modelo das variáveis de ambiente
 ├── requirements.txt          # Dependências do projeto (versões fixas)

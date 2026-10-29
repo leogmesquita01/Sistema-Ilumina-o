@@ -7,6 +7,12 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# caches de ferramentas (pytest, ruff, cobertura)
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
 .DS_Store
 Thumbs.db
 

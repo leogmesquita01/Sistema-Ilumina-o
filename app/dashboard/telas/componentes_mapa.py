@@ -22,15 +22,13 @@ import folium
 import streamlit as st
 from folium import plugins
 
-from app.constantes import STATUS_CHAMADO, eh_urgente
+from app.constantes import STATUS_CHAMADO, URL_SATELITE, eh_urgente
 from app.servicos.dados_postes import localizacao_pendente
-
-URL_ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
 
 # Nome mostrado no controle da tela -> (tiles, atribuição)
 CAMADAS = {
     "Ruas": ("OpenStreetMap", None),
-    "Satélite": (URL_ESRI, "Esri World Imagery"),
+    "Satélite": (URL_SATELITE, "Esri World Imagery"),
     "Noturno": ("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", "CartoDB Dark"),
 }
 

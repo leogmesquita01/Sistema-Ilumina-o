@@ -2,17 +2,13 @@ import folium
 import streamlit as st
 from streamlit_folium import st_folium
 
-from app.constantes import BRACOS, ESTRUTURAS, LUMINARIAS
+from app.constantes import BRACOS, CENTRO_MUNICIPIO, ESTRUTURAS, LUMINARIAS, URL_SATELITE
 from app.dashboard.html_seguro import esc
 from app.database.conexao import modo_local
 from app.erros import mensagem_para_usuario
 from app.dashboard.ui import html, painel, painel_topo, tela, topo
-from app.servicos.dados_postes import COORDENADA_PADRAO, cadastrar_poste, codigo_duplicado, listar_postes, localizacao_pendente
+from app.servicos.dados_postes import cadastrar_poste, codigo_duplicado, listar_postes, localizacao_pendente
 
-_URL_ESRI = (
-    "https://server.arcgisonline.com/ArcGIS/rest/services/"
-    "World_Imagery/MapServer/tile/{z}/{y}/{x}"
-)
 _ZOOM_CADASTRO = 15
 
 
@@ -23,10 +19,10 @@ def _mapa_escolha_localizacao():
     cadastro normal, e o poste entra na fila de "Localização pendente".
     """
     ponto = st.session_state.get("cad_ponto")
-    centro = [ponto["lat"], ponto["lng"]] if ponto else list(COORDENADA_PADRAO)
+    centro = [ponto["lat"], ponto["lng"]] if ponto else list(CENTRO_MUNICIPIO)
 
     mapa = folium.Map(location=centro, zoom_start=_ZOOM_CADASTRO, tiles=None, control_scale=True)
-    folium.TileLayer(tiles=_URL_ESRI, attr="Esri World Imagery", name="Satélite", show=True).add_to(mapa)
+    folium.TileLayer(tiles=URL_SATELITE, attr="Esri World Imagery", name="Satélite", show=True).add_to(mapa)
     folium.TileLayer(tiles="OpenStreetMap", name="Ruas", show=False).add_to(mapa)
     folium.LayerControl(position="topright", collapsed=True).add_to(mapa)
 

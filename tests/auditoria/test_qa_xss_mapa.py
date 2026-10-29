@@ -14,7 +14,6 @@ CARGA = "${globalThis.PWN=String.fromCharCode(88,83,83)}"
 
 
 def _html_mapa(monkeypatch, poste):
-    capturado = {}
     cm._guardados.clear()
     return cm.gerar_html_mapa([poste], [-6.15, -35.61], 15, "Ruas")
 

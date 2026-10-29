@@ -13,11 +13,6 @@ from app.database.conexao import modo_local, obter_conexao, obter_supabase
 from app.database.paginacao import buscar_todas_paginas
 from app.erros import NadaGravado
 
-# Mantido por compatibilidade com as telas: é o centro do município, usado para
-# centralizar mapas. Não é mais gravado como coordenada de poste.
-COORDENADA_PADRAO = CENTRO_MUNICIPIO
-
-
 def _agora_utc_iso() -> str:
     return datetime.datetime.now(datetime.timezone.utc).isoformat()
 
@@ -215,11 +210,6 @@ class PosteDuplicado(ValueError):
     def __init__(self, codigo_existente: str):
         super().__init__(f"Já existe um poste com o código {codigo_existente}.")
         self.codigo_existente = codigo_existente
-
-
-def mesmo_codigo(a: Optional[str], b: Optional[str]) -> bool:
-    """Códigos de plaqueta valem sem diferenciar maiúsculas: "p-01" é o "P-01"."""
-    return (a or "").strip().casefold() == (b or "").strip().casefold()
 
 
 def cadastrar_poste(dados: Dict[str, Any]) -> bool:
