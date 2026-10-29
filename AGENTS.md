@@ -15,7 +15,9 @@ importa este arquivo.
   não vão juntos.
 - Mensagens em português, no padrão `tipo(escopo): resumo`
   (`feat`, `fix`, `perf`, `refactor`, `docs`, `style`, `chore`).
-- **Não fazer `push`** sem pedido explícito: o repositório é público.
+- **Sempre fazer `push`** logo depois de commitar, para o trabalho já ficar no GitHub.
+  Nunca para o `main` direto: subir o branch de trabalho (criar no remoto se não existir).
+  O repositório é público: conferir o diff em busca de chave real antes de subir.
 - Autor dos commits é só o Leonardo: **sem** linha `Co-Authored-By`,
   `Generated with` ou qualquer outra atribuição a agente/IA, em commit ou PR.
 
