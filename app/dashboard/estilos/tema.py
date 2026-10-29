@@ -124,7 +124,7 @@ header[data-testid="stHeader"] { height: 0 !important; min-height: 0 !important;
     box-shadow: 0 6px 18px rgba(21, 23, 26, 0.06);
 }
 .st-key-nav_principal [data-testid="stRadioOption"] {
-    margin: 0 !important; padding: 0 14px; min-height: 40px; border-radius: 999px;
+    margin: 0 !important; padding: 0 12px; min-height: 40px; border-radius: 999px;
     display: flex; align-items: center; cursor: pointer;
     transition: background-color 0.22s var(--curva), color 0.22s var(--curva);
 }

@@ -1,15 +1,17 @@
 import streamlit as st
 
-from app.constantes import OS_ABERTA, OS_CONCLUIDA, PRIORIDADE_URGENTE, STATUS_CHAMADO, STATUS_URGENTE
+from app.constantes import OS_ABERTA, OS_CANCELADA, OS_CONCLUIDA, PRIORIDADE_URGENTE, STATUS_CHAMADO, STATUS_URGENTE
 from app.dashboard.html_seguro import esc
 from app.dashboard.ui import html, kpis, painel, status_html, tela, topo, vazio
 from app.fuso import para_local
 from app.servicos.ordens_service import concluir_ordem_servico, gerar_mensagem_whatsapp, listar_ordens
 
-FILTROS = {"Abertas": OS_ABERTA, "Concluídas": OS_CONCLUIDA, "Todas": "Todos"}
+FILTROS = {"Abertas": OS_ABERTA, "Concluídas": OS_CONCLUIDA, "Canceladas": OS_CANCELADA, "Todas": "Todos"}
 
 
 def _status_os(os_item: dict) -> str:
+    if os_item.get("status") == OS_CANCELADA:
+        return '<span class="il-status concluida">Cancelada</span>'
     if os_item.get("status") != OS_ABERTA:
         return '<span class="il-status concluida">Concluída</span>'
     prioridade = os_item.get("prioridade") or "Normal"
@@ -46,7 +48,8 @@ def renderizar_tela_ordens_servico():
         abertas = [o for o in todas if o.get("status") == OS_ABERTA]
         urgentes = [o for o in abertas if o.get("prioridade") == PRIORIDADE_URGENTE]
         concluidas = [o for o in todas if o.get("status") == OS_CONCLUIDA]
-        taxa = round(len(concluidas) / len(todas) * 100) if todas else 0
+        validas = [o for o in todas if o.get("status") != OS_CANCELADA]  # cancelada não conta na taxa
+        taxa = round(len(concluidas) / len(validas) * 100) if validas else 0
 
         topo(
             "Manutenção",

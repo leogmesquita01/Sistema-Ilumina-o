@@ -26,6 +26,7 @@ from app.dashboard.telas.ordens_servico import renderizar_tela_ordens_servico
 from app.dashboard.telas.importar_base import renderizar_tela_importar
 from app.dashboard.telas.cadastrar_poste import renderizar_tela_cadastrar
 from app.dashboard.telas.localizacao_postes import renderizar_tela_localizacao
+from app.dashboard.telas.administracao import eh_admin, renderizar_tela_administracao
 
 st.set_page_config(
     page_title=f"Ilumina {NOME_MUNICIPIO}",
@@ -62,7 +63,14 @@ def _tratar_erro_banco(erro: Exception) -> None:
 # ---- Navegação ---------------------------------------------------------------
 # `pagina_atual` é a fonte da verdade; o menu só a espelha. Assim qualquer botão
 # pode trocar de tela (ui.ir_para) sem mexer no estado de um widget já criado.
-if st.session_state.get("pagina_atual") not in PAGINAS:
+# A tela "Administração" só entra no menu de quem é admin. Operador que tentar
+# chegar nela pelo session_state volta para o mapa (e o banco barra de qualquer jeito).
+usuario = usuario_atual()
+paginas = dict(PAGINAS)
+if eh_admin(usuario):
+    paginas["admin"] = ":material/admin_panel_settings: Admin"
+
+if st.session_state.get("pagina_atual") not in paginas:
     st.session_state["pagina_atual"] = "mapa"
 st.session_state["nav_principal"] = st.session_state["pagina_atual"]
 
@@ -73,11 +81,12 @@ def _ao_trocar_tela() -> None:
 
 
 # ---- Cabeçalho: marca · menu · quem está logado ------------------------------
-usuario = usuario_atual()
 nome_usuario = usuario["nome"]
 papel_usuario = "Administrador" if usuario.get("papel") == "admin" else "Operador"
 
-col_marca, col_menu, col_usuario = st.columns([1, 6.4, 1.7], vertical_alignment="center", gap="small")
+# Com a aba Admin o menu tem 7 itens: ganha espaço do bloco do usuário para não quebrar linha.
+proporcao = [1, 7.4, 1.4] if "admin" in paginas else [1, 6.4, 1.7]
+col_marca, col_menu, col_usuario = st.columns(proporcao, vertical_alignment="center", gap="small")
 with col_marca:
     html(
         '<div class="il-marca">'
@@ -90,8 +99,8 @@ with col_marca:
 with col_menu:
     st.radio(
         "Telas",
-        list(PAGINAS),
-        format_func=lambda chave: PAGINAS[chave],
+        list(paginas),
+        format_func=lambda chave: paginas[chave],
         key="nav_principal",
         on_change=_ao_trocar_tela,
         horizontal=True,
@@ -117,6 +126,7 @@ telas = {
     "cadastro": renderizar_tela_cadastrar,
     "importar": renderizar_tela_importar,
     "localizar": renderizar_tela_localizacao,
+    "admin": renderizar_tela_administracao,
 }
 
 try:
