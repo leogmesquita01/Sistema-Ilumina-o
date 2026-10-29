@@ -55,7 +55,6 @@ PENDENTES = {
     "test_qa155_jwt_expirado_no_modo_local_nao_entra_em_laco": "AUD-10 laço de rerun",
     "test_qa157_navegar_reparo_supabase_sem_permissao_insert_mostra_erro_amigavel": "AUD-10 mensagem de erro",
     "test_qa159_falha_de_rede_no_login_vira_traceback": "AUD-10 login",
-    "test_qa160_mapa_busca_ficha_e_ir_para_reparo": "AUD-11 ficha x busca",
 }
 
 

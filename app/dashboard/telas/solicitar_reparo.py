@@ -6,6 +6,7 @@ from app.servicos.dados_postes import cadastrar_poste, listar_postes, obter_post
 from app.servicos.ordens_service import criar_ordem_servico, gerar_mensagem_whatsapp
 
 NOVO_POSTE = "+ Novo poste não listado"
+ESCOLHA = "— Escolha o poste —"
 
 DEFEITOS = [
     "Lâmpada apagada durante a noite",
@@ -29,10 +30,17 @@ def _escolher_poste(todos_postes: list):
         return None, True
 
     opcoes = {f"{p['codigo']} · {p.get('logradouro') or '—'} ({p.get('bairro') or '—'})": p["codigo"] for p in todos_postes}
-    lista = list(opcoes) + [NOVO_POSTE]
-    pre = st.session_state.get("poste_selecionado_os")
-    indice = next((i for i, cod in enumerate(opcoes.values()) if cod == pre), 0)
-    escolha = st.selectbox("Poste para reparo", lista, index=indice, key="reparo_poste")
+    lista = [ESCOLHA] + list(opcoes) + [NOVO_POSTE]
+    # Poste vindo da ficha do mapa: usado uma vez só (antes ficava preso na sessão).
+    pre = st.session_state.pop("poste_selecionado_os", None)
+    if pre:
+        st.session_state["reparo_poste"] = next((r for r, cod in opcoes.items() if cod == pre), ESCOLHA)
+    if st.session_state.get("reparo_poste") not in lista:
+        st.session_state["reparo_poste"] = ESCOLHA
+    escolha = st.selectbox("Poste para reparo", lista, key="reparo_poste")
+    if escolha == ESCOLHA:
+        html('<div class="il-nota">Escolha o poste na lista ou cadastre um novo.</div>')
+        return None, False
     if escolha == NOVO_POSTE:
         html('<div class="il-nota">O poste será cadastrado junto com a O.S., como localização pendente.</div>')
         return None, True
@@ -117,6 +125,10 @@ def renderizar_tela_solicitar_reparo():
                     submeter = st.form_submit_button("Emitir ordem de serviço", type="primary", use_container_width=True)
 
         if not submeter:
+            return
+
+        if not modo_novo_poste and not poste:
+            st.error("Escolha o poste do reparo antes de emitir a ordem de serviço.")
             return
 
         if modo_novo_poste:

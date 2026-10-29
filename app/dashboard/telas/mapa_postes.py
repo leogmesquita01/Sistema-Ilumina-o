@@ -221,9 +221,14 @@ def renderizar_tela_mapa() -> None:
                 painel_topo("Poste selecionado")
                 opcoes = {_rotulo_poste(p): p for p in postes}
                 rotulos = ["—"] + list(opcoes)
-                foco_codigo = st.session_state.get("mapa_foco")
-                indice = next((i for i, r in enumerate(rotulos[1:], 1) if opcoes[r]["codigo"] == foco_codigo), 0)
-                escolha = st.selectbox("Inspecionar poste", rotulos, index=indice, key="mapa_inspecao")
+                # Com `key`, o Streamlit ignora `index` depois do 1º uso: a seleção
+                # precisa ser escrita no estado do widget quando a busca acha outro poste.
+                if foco is not None and st.session_state.get("mapa_foco_aplicado") != foco["codigo"]:
+                    st.session_state["mapa_foco_aplicado"] = foco["codigo"]
+                    st.session_state["mapa_inspecao"] = _rotulo_poste(foco)
+                if st.session_state.get("mapa_inspecao") not in rotulos:
+                    st.session_state["mapa_inspecao"] = "—"
+                escolha = st.selectbox("Inspecionar poste", rotulos, key="mapa_inspecao")
                 _ficha(opcoes.get(escolha))
 
             with painel("fila"):

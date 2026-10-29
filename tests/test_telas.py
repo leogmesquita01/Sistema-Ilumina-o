@@ -63,3 +63,23 @@ def test_supabase_sem_login_mostra_tela_de_login(monkeypatch):
     assert not at.exception
     assert any(b.label == "Entrar" for b in at.button)
     assert len(at.text_input) == 2
+
+
+def test_reparo_exige_escolher_o_poste(dados):
+    """Antes vinha o 1º poste da lista já escolhido: dava para abrir O.S. no poste errado."""
+    at = AppTest.from_file(APP, default_timeout=120)
+    at.session_state["pagina_atual"] = "reparo"
+    at.run()
+    assert at.selectbox(key="reparo_poste").value == "— Escolha o poste —"
+    next(b for b in at.button if b.label == "Emitir ordem de serviço").click()
+    at.run()
+    assert any("Escolha o poste" in e.value for e in at.error)
+
+
+def test_poste_vindo_da_ficha_e_usado_uma_vez(dados):
+    at = AppTest.from_file(APP, default_timeout=120)
+    at.session_state["pagina_atual"] = "reparo"
+    at.session_state["poste_selecionado_os"] = "P-01"
+    at.run()
+    assert at.selectbox(key="reparo_poste").value.startswith("P-01")
+    assert "poste_selecionado_os" not in at.session_state
