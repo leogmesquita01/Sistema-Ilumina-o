@@ -123,14 +123,21 @@ def renderizar_tela_solicitar_reparo():
             if not novo_codigo or not novo_codigo.strip():
                 st.error("Informe o código ou identificação do poste.")
                 return
-            cod_alvo = novo_codigo.strip()
-            log_alvo = novo_logradouro.strip() if novo_logradouro else "Não informado"
-            bairro_alvo = novo_bairro.strip() if novo_bairro else "Centro"
-            lum_alvo = "LED 100W"
-            lat_alvo = lng_alvo = None
-            if not obter_poste_por_codigo(cod_alvo):
+            existente = obter_poste_por_codigo(novo_codigo.strip())
+            if existente:
+                # "p-01" digitado quando já existe "P-01": a O.S. vai para o poste que
+                # existe, com os dados dele (antes gravava "p-01" e quebrava a FK).
+                st.info(f"O poste {existente['codigo']} já estava cadastrado; a O.S. foi aberta nele.")
+                poste = existente
+            else:
+                cod_alvo = novo_codigo.strip()
+                log_alvo = novo_logradouro.strip() if novo_logradouro else "Não informado"
+                bairro_alvo = novo_bairro.strip() if novo_bairro else "Centro"
+                lum_alvo = "LED 100W"
+                lat_alvo = lng_alvo = None
                 cadastrar_poste({"codigo": cod_alvo, "logradouro": log_alvo, "bairro": bairro_alvo})
-        else:
+
+        if poste:
             cod_alvo = poste["codigo"]
             log_alvo = poste.get("logradouro") or "Não informado"
             bairro_alvo = poste.get("bairro") or ""

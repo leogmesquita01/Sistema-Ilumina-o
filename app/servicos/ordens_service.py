@@ -19,7 +19,7 @@ from app.constantes import (
 from app.database.conexao import modo_local, obter_conexao, obter_supabase
 from app.database.paginacao import buscar_todas_paginas
 from app.fuso import agora_local
-from app.servicos.dados_postes import atualizar_status_poste, localizacao_pendente
+from app.servicos.dados_postes import atualizar_status_poste, localizacao_pendente, obter_poste_por_codigo
 
 
 def _materiais_como_lista(valor) -> List[Dict[str, Any]]:
@@ -147,6 +147,11 @@ def criar_ordem_servico(
     não mais de ``COUNT(*) + 1``, que repetia números quando duas O.S. eram
     abertas ao mesmo tempo ou quando alguma era apagada. O ano é o atual.
     """
+    # Usa a grafia que está no banco ("p-01" digitado → "P-01"): a FK diferencia caixa.
+    poste = obter_poste_por_codigo(codigo_poste)
+    if poste:
+        codigo_poste = poste["codigo"]
+
     registro = {
         "codigo_poste": codigo_poste,
         "defeito": defeito,

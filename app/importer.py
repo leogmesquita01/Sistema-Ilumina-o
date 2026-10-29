@@ -18,6 +18,7 @@ import pandas as pd
 from app.cache import limpar_cache
 from app.constantes import BRACOS, ESTRUTURAS, LUMINARIAS
 from app.database.conexao import modo_local, obter_conexao, obter_supabase
+from app.database.paginacao import buscar_todas_paginas
 
 # Ordem importa: campos mais específicos primeiro. Assim "tipo_poste" é
 # reconhecido antes de "codigo" tentar usar o sinônimo "poste".
@@ -229,11 +230,12 @@ def preparar_registros(df: pd.DataFrame, col_map: Dict[str, Any]) -> Dict[str, A
             if aviso and len(avisos) < 8:
                 avisos.append(f"Linha {linha} ({codigo}): {aviso}")
 
-        if codigo in por_codigo:
+        chave = codigo.casefold()  # "P-01" e "p-01" são o mesmo poste
+        if chave in por_codigo:
             duplicados += 1
             if len(avisos) < 8:
                 avisos.append(f"Linha {linha}: código {codigo} repetido — vale a última ocorrência")
-        por_codigo[codigo] = registro
+        por_codigo[chave] = registro
 
     return {
         "registros": list(por_codigo.values()),
@@ -261,14 +263,36 @@ def _mesclar_existente(registro: Dict[str, Any]) -> Dict[str, Any]:
     return {k: v for k, v in registro.items() if v is not None or k in ("latitude", "longitude")}
 
 
-def _gravar_supabase(registros: List[Dict[str, Any]]) -> None:
-    sb = obter_supabase()
-    codigos = [r["codigo"] for r in registros]
+def ajustar_para_codigos_existentes(registros: List[Dict[str, Any]], existentes: List[str]) -> int:
+    """Troca o código da planilha pela grafia que já está no banco ("p-01" → "P-01").
 
-    existentes: set = set()
-    for i in range(0, len(codigos), 200):
-        res = sb.table("postes").select("codigo").in_("codigo", codigos[i:i + 200]).execute()
-        existentes.update(r["codigo"] for r in (res.data or []))
+    O UNIQUE do banco diferencia maiúsculas; sem isso, reimportar com outra caixa
+    criava um segundo poste. Devolve quantos códigos foram ajustados.
+    """
+    canonico = {c.casefold(): c for c in existentes}
+    ajustados = 0
+    for r in registros:
+        oficial = canonico.get(r["codigo"].casefold())
+        if oficial is not None and oficial != r["codigo"]:
+            r["codigo"] = oficial
+            ajustados += 1
+    return ajustados
+
+
+def _codigos_existentes() -> List[str]:
+    if modo_local():
+        conn = obter_conexao()
+        try:
+            return [r["codigo"] for r in conn.execute("SELECT codigo FROM postes;")]
+        finally:
+            conn.close()
+    sb = obter_supabase()
+    linhas = buscar_todas_paginas(lambda: sb.table("postes").select("codigo").order("id"))
+    return [r["codigo"] for r in linhas]
+
+
+def _gravar_supabase(registros: List[Dict[str, Any]], existentes: set) -> None:
+    sb = obter_supabase()
 
     # O PostgREST grava em lote só as colunas presentes no PRIMEIRO objeto. Por
     # isso os lotes são agrupados por conjunto de colunas.
@@ -327,12 +351,15 @@ def import_poles_file(file_bytes: bytes, filename: str) -> Dict[str, Any]:
 
     preparo = preparar_registros(df, col_map)
     registros = preparo["registros"]
+    ajustados = 0
 
     if registros:
+        existentes = _codigos_existentes()
+        ajustados = ajustar_para_codigos_existentes(registros, existentes)
         if modo_local():
             _gravar_sqlite(registros, preparo["campos_texto"], preparo["tem_potencia"])
         else:
-            _gravar_supabase(registros)
+            _gravar_supabase(registros, set(existentes))
         limpar_cache()
 
     return {
@@ -341,6 +368,7 @@ def import_poles_file(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         "importados": len(registros),
         "erros": preparo["ignoradas"],
         "duplicados": preparo["duplicados"],
+        "codigos_ajustados": ajustados,
         "detalhes_erros": preparo["avisos"],
         "colunas_identificadas": {k: str(v) for k, v in col_map.items()},
     }

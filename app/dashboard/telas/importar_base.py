@@ -44,6 +44,11 @@ def _resultado(resultado: dict) -> None:
     st.caption("Colunas usadas: " + ", ".join(f"{campo} ← “{coluna}”" for campo, coluna in colunas.items()))
     if resultado.get("duplicados"):
         st.warning(f"{resultado['duplicados']} código(s) repetido(s) na planilha — valeu a última linha de cada um.")
+    if resultado.get("codigos_ajustados"):
+        st.info(
+            f"{resultado['codigos_ajustados']} código(s) da planilha só mudavam nas maiúsculas/minúsculas "
+            "e foram ligados ao poste que já existia (ex.: p-01 → P-01)."
+        )
     for aviso in resultado.get("detalhes_erros", []):
         st.caption(f"⚠ {aviso}")
     st.info(

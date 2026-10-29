@@ -144,10 +144,11 @@ def obter_poste_por_codigo(codigo: str) -> Optional[Dict[str, Any]]:
         # ilike sem curinga = igualdade sem diferenciar maiúsculas. Escapa os
         # curingas do LIKE para "P_01" não casar com "PX01".
         padrao = codigo.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-        res = sb.table("postes").select("*").ilike("codigo", padrao).limit(1).execute()
+        res = sb.table("postes").select("*").ilike("codigo", padrao).limit(10).execute()
         if not res.data:
             return None
-        poste = res.data[0]
+        # Bases antigas podem ter "P-01" e "p-01": a grafia exata tem preferência.
+        poste = next((r for r in res.data if r["codigo"] == codigo), res.data[0])
         res_os = (
             sb.table("ordens_servico")
             .select("*")
@@ -162,7 +163,10 @@ def obter_poste_por_codigo(codigo: str) -> Optional[Dict[str, Any]]:
     conn = obter_conexao()
     cursor = conn.cursor()
 
-    row = cursor.execute("SELECT * FROM postes WHERE codigo = ? COLLATE NOCASE;", (codigo,)).fetchone()
+    row = cursor.execute(
+        "SELECT * FROM postes WHERE codigo = ? COLLATE NOCASE ORDER BY (codigo = ?) DESC LIMIT 1;",
+        (codigo, codigo),
+    ).fetchone()
     if not row:
         conn.close()
         return None
@@ -184,8 +188,29 @@ def _coordenada_ou_none(valor) -> Optional[float]:
     return float(valor)
 
 
+class PosteDuplicado(ValueError):
+    """Já existe um poste com este código (sem diferenciar maiúsculas)."""
+
+    def __init__(self, codigo_existente: str):
+        super().__init__(f"Já existe um poste com o código {codigo_existente}.")
+        self.codigo_existente = codigo_existente
+
+
+def mesmo_codigo(a: Optional[str], b: Optional[str]) -> bool:
+    """Códigos de plaqueta valem sem diferenciar maiúsculas: "p-01" é o "P-01"."""
+    return (a or "").strip().casefold() == (b or "").strip().casefold()
+
+
 def cadastrar_poste(dados: Dict[str, Any]) -> bool:
-    """Cadastra um poste. Sem coordenada, ele fica como "localização pendente"."""
+    """Cadastra um poste. Sem coordenada, ele fica como "localização pendente".
+
+    Levanta :class:`PosteDuplicado` se o código já existe com outra caixa
+    ("p-01" quando há "P-01"): no banco seriam dois postes diferentes.
+    """
+    existente = obter_poste_por_codigo(dados["codigo"])
+    if existente:
+        raise PosteDuplicado(existente["codigo"])
+
     novo_poste = {
         "codigo": dados["codigo"].strip(),
         "latitude": _coordenada_ou_none(dados.get("latitude")),
@@ -222,6 +247,8 @@ def cadastrar_poste(dados: Dict[str, Any]) -> bool:
 
 def codigo_duplicado(erro: Exception) -> bool:
     """Reconhece erro de código repetido no Postgres (23505) e no SQLite."""
+    if isinstance(erro, PosteDuplicado):
+        return True
     texto = str(erro).lower()
     return "23505" in texto or "duplicate" in texto or "unique constraint" in texto
 

@@ -162,7 +162,8 @@ def renderizar_tela_cadastrar():
             })
         except Exception as e:
             if codigo_duplicado(e):
-                st.error(f"Já existe um poste com o código {codigo.strip()}.")
+                existente = getattr(e, "codigo_existente", codigo.strip())
+                st.error(f"Já existe um poste com o código {existente}.")
             else:
                 st.error(f"Erro ao cadastrar poste: {e}")
             return
