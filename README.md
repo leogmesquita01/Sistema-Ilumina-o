@@ -40,12 +40,13 @@ conta e o RLS do banco decide o que ela pode fazer.
 1. No painel do Supabase, abra o **SQL Editor** e rode, nesta ordem, os arquivos de
    [`supabase/migrations/`](supabase/migrations/): `000_esquema_base.sql` (só em banco
    novo — cria as tabelas), `001_rls.sql`, `002_login.sql`, `003_ajustes_seguranca.sql`
-   e `004_ajustes_auditoria.sql`. Todos podem ser rodados de novo sem erro.
+   `004_ajustes_auditoria.sql` e `005_area_admin.sql`. Todos podem ser rodados de novo sem erro.
 2. **Authentication → Sign In / Providers → Email**: desligue
    *"Allow new users to sign up"* (só o administrador cria contas).
 3. **Authentication → Users → Add user**: crie a conta com e-mail e senha e marque
    *Auto Confirm User*.
-4. Libere a pessoa no sistema rodando no SQL Editor (troque nome e e-mail):
+4. Libere a **primeira** conta de administrador rodando no SQL Editor (troque nome e e-mail).
+   As próximas o administrador libera pelo próprio app, na tela **Admin → Equipe**:
 
    ```sql
    insert into public.perfis (id, nome, papel)
@@ -55,6 +56,17 @@ conta e o RLS do banco decide o que ela pode fazer.
 
 Uma conta sem linha em `perfis` (ou com `ativo = false`) não consegue ler nem gravar
 nada, mesmo que exista no Auth.
+
+### Área do administrador (tela Admin)
+
+Só aparece para quem tem papel `admin`, e o banco (migração 005) barra o operador
+mesmo fora do app:
+
+- **Equipe**: ver quem tem acesso, trocar papel, desativar e liberar contas novas do Auth.
+- **Ações sensíveis**: renomear código de poste (as O.S. acompanham), excluir poste sem
+  O.S., cancelar O.S. com motivo, corrigir protocolo e excluir O.S.
+- **Histórico**: quem criou, alterou ou excluiu postes, O.S. e usuários (gravado por gatilho).
+- **Backup**: planilha Excel com todos os postes e todas as O.S.
 
 > Recarregar a página (F5) encerra a sessão e pede login de novo. O token é renovado
 > enquanto a aba está em uso; uma aba parada por muito tempo pede login de novo.
@@ -190,7 +202,8 @@ Sistema-Ilumina-o/
 │       ├── 001_rls.sql               # Liga o RLS nas tabelas
 │       ├── 002_login.sql             # Perfis, RLS por usuário, protocolo e status
 │       ├── 003_ajustes_seguranca.sql # Avisos do Security Advisor
-│       └── 004_ajustes_auditoria.sql # Código sem caixa, protocolo, permissões
+│       ├── 004_ajustes_auditoria.sql # Código sem caixa, protocolo, permissões
+│       └── 005_area_admin.sql        # Área do admin: equipe, ações sensíveis, histórico
 │
 ├── kobo/                     # Formulário do KoboToolbox (coleta offline)
 │   ├── gerar_formulario.py   # Gera o XLSForm a partir das constantes
