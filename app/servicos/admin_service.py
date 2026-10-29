@@ -63,6 +63,45 @@ def liberar_usuario(usuario_id: str, nome: str, papel: str = "operador") -> None
     ).execute()
 
 
+def criar_membro(email: str, nome: str, papel: str, senha: str) -> str:
+    """Cria a conta no Supabase Auth e já libera o acesso (Edge Function ``criar-membro``).
+
+    A criação de conta exige a chave service_role, que nunca fica no app: quem a
+    usa é a Edge Function, depois de conferir que quem chamou é admin.
+    """
+    email = (email or "").strip().lower()
+    nome = (nome or "").strip()
+    if papel not in PAPEIS:
+        raise AcaoRecusada(f"Papel inválido: {papel}")
+    if "@" not in email or "." not in email.split("@")[-1]:
+        raise AcaoRecusada("E-mail inválido.")
+    if not nome:
+        raise AcaoRecusada("Informe o nome da pessoa.")
+    if len(senha or "") < 8:
+        raise AcaoRecusada("A senha provisória precisa ter pelo menos 8 caracteres.")
+    if modo_local():
+        raise AcaoRecusada("No modo local não há equipe: o acesso é feito pelo Supabase.")
+
+    try:
+        obter_supabase().functions.invoke(
+            "criar-membro",
+            invoke_options={"body": {"email": email, "nome": nome, "papel": papel, "senha": senha}},
+        )
+    except Exception as erro:
+        nome_classe = type(erro).__name__
+        status = getattr(erro, "status", None)
+        if nome_classe == "FunctionsHttpError" and status != 404:
+            # A função respondeu com a mensagem para o usuário ({"error": ...}).
+            raise AcaoRecusada(getattr(erro, "message", None) or str(erro)) from erro
+        if nome_classe in ("FunctionsHttpError", "FunctionsRelayError"):
+            raise AcaoRecusada(
+                "A função criar-membro não está publicada no Supabase. Use o painel do Supabase "
+                "(Authentication → Add user) e depois “Liberar acesso”."
+            ) from erro
+        raise
+    return email
+
+
 # ---- Ações sensíveis ---------------------------------------------------------
 
 def _ordem_por_protocolo(protocolo: str) -> Optional[Dict[str, Any]]:

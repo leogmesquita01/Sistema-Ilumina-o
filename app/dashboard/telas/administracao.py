@@ -3,6 +3,8 @@
 A tela é a porta; a fechadura é o banco (migração 005). Mesmo assim ela confere o
 papel de novo aqui, para ninguém cair nela mexendo no ``session_state``.
 """
+import secrets
+
 import pandas as pd
 import streamlit as st
 
@@ -53,6 +55,8 @@ def _aba_equipe() -> None:
     pendentes = [m for m in membros if not m.get("liberado")]
     liberados = [m for m in membros if m.get("liberado")]
 
+    _adicionar_membro()
+
     with painel("admin-equipe"):
         painel_topo("Quem tem acesso", f"{len(liberados)} conta(s)")
         if liberados:
@@ -70,7 +74,7 @@ def _aba_equipe() -> None:
             por_id = {m["id"]: m for m in liberados}
             # Fora do formulário: trocar a pessoa recarrega os campos com os dados dela.
             escolhido = st.selectbox(
-                "Editar", list(por_id),
+                "Editar", list(por_id), key="admin_editar",
                 format_func=lambda i: f"{por_id[i].get('nome') or '—'} · {por_id[i].get('email')}",
             )
             m = por_id[escolhido]
@@ -90,17 +94,45 @@ def _aba_equipe() -> None:
         painel_topo("Contas aguardando liberação", f"{len(pendentes)}")
         if not pendentes:
             html(vazio("Nenhuma conta esperando",
-                       "Para chamar alguém: Supabase → Authentication → Add user. A conta aparece aqui para liberar."))
+                       "Contas criadas pelo painel do Supabase (Authentication → Add user) aparecem aqui para liberar."))
         else:
-            por_id = {m["id"]: m for m in pendentes}
+            pendentes_por_id = {m["id"]: m for m in pendentes}
             with st.form("form_liberar", border=False):
-                escolhido = st.selectbox("Conta", list(por_id), format_func=lambda i: por_id[i].get("email"))
+                escolhido = st.selectbox("Conta", list(pendentes_por_id), key="admin_liberar", format_func=lambda i: pendentes_por_id[i].get("email"))
                 c1, c2 = st.columns([2, 1.3], vertical_alignment="bottom")
                 nome = c1.text_input("Nome de quem vai usar")
                 papel = c2.selectbox("Papel", list(adm.PAPEIS), format_func=adm.PAPEIS.get, key="papel_liberar")
                 if st.form_submit_button("Liberar acesso", type="primary"):
                     _executar(lambda: adm.liberar_usuario(escolhido, nome, papel),
-                              f"Acesso liberado para {por_id[escolhido].get('email')}.")
+                              f"Acesso liberado para {pendentes_por_id[escolhido].get('email')}.")
+
+
+def _senha_sugerida() -> str:
+    """Senha provisória legível (sem 0/O, 1/l) para passar à pessoa."""
+    alfabeto = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    return "".join(secrets.choice(alfabeto) for _ in range(10))
+
+
+def _adicionar_membro() -> None:
+    with painel("admin-novo-membro"):
+        painel_topo("Adicionar membro", "cria a conta e já libera")
+        if "admin_senha_sugerida" not in st.session_state:
+            st.session_state["admin_senha_sugerida"] = _senha_sugerida()
+        with st.form("form_novo_membro", border=False):
+            c1, c2 = st.columns(2)
+            email = c1.text_input("E-mail", placeholder="pessoa@exemplo.com")
+            nome = c2.text_input("Nome")
+            c3, c4 = st.columns(2)
+            papel = c3.selectbox("Papel", list(adm.PAPEIS), format_func=adm.PAPEIS.get, key="papel_novo")
+            senha = c4.text_input("Senha provisória", value=st.session_state["admin_senha_sugerida"],
+                                  help="Passe para a pessoa junto com o e-mail. Mínimo de 8 caracteres.")
+            if st.form_submit_button("Criar conta", type="primary"):
+                def criar():
+                    adm.criar_membro(email, nome, papel, senha)
+                    st.session_state.pop("admin_senha_sugerida", None)  # próxima pessoa ganha outra
+
+                _executar(criar, f"Conta criada para {email.strip().lower()} — senha provisória: {senha}. "
+                                 "Passe os dois para a pessoa entrar.")
 
 
 # ---- Ações sensíveis ---------------------------------------------------------

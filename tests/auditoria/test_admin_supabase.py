@@ -101,3 +101,51 @@ def test_operador_logado_nao_entra(com_equipe):
     at = _app(com_equipe, "operador")
     assert at.session_state["pagina_atual"] == "mapa"
     assert com_equipe.rpcs == []
+
+
+# ---- Adicionar membro (Edge Function criar-membro) ---------------------------
+
+def test_criar_membro_chama_a_funcao(com_equipe):
+    adm.criar_membro(" Nova@Pref.gov.br ", " Nova ", "operador", "senha-forte-1")
+    assert com_equipe.functions.chamadas == [(
+        "criar-membro", {"email": "nova@pref.gov.br", "nome": "Nova", "papel": "operador", "senha": "senha-forte-1"},
+    )]
+
+
+@pytest.mark.parametrize("email, nome, senha", [
+    ("sem-arroba", "Nova", "senha-forte-1"),
+    ("nova@pref.gov.br", "  ", "senha-forte-1"),
+    ("nova@pref.gov.br", "Nova", "curta"),
+])
+def test_criar_membro_valida_antes_de_chamar(com_equipe, email, nome, senha):
+    with pytest.raises(adm.AcaoRecusada):
+        adm.criar_membro(email, nome, "operador", senha)
+    assert com_equipe.functions.chamadas == []
+
+
+def test_criar_membro_mostra_a_mensagem_da_funcao(com_equipe):
+    from supabase_functions.errors import FunctionsHttpError
+
+    com_equipe.functions.respostas["criar-membro"] = FunctionsHttpError("Já existe uma conta com esse e-mail.", 409)
+    with pytest.raises(adm.AcaoRecusada, match="Já existe uma conta"):
+        adm.criar_membro("leo@pref.gov.br", "Leo", "operador", "senha-forte-1")
+
+
+def test_criar_membro_sem_funcao_publicada_orienta(com_equipe):
+    from supabase_functions.errors import FunctionsHttpError
+
+    com_equipe.functions.respostas["criar-membro"] = FunctionsHttpError("Requested function was not found", 404)
+    with pytest.raises(adm.AcaoRecusada, match="não está publicada"):
+        adm.criar_membro("nova@pref.gov.br", "Nova", "operador", "senha-forte-1")
+
+
+def test_tela_cria_membro(com_equipe):
+    at = _app(com_equipe, "admin")
+    next(t for t in at.text_input if t.label == "E-mail").input("nova@pref.gov.br")
+    next(t for t in at.text_input if t.label == "Nome").input("Nova Pessoa")
+    next(b for b in at.button if b.label == "Criar conta").click()
+    at.run()
+    assert not at.exception, at.exception
+    assert any("Conta criada para nova@pref.gov.br" in s.value for s in at.success)
+    nome, corpo = com_equipe.functions.chamadas[0]
+    assert nome == "criar-membro" and corpo["nome"] == "Nova Pessoa" and len(corpo["senha"]) == 10

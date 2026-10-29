@@ -140,6 +140,21 @@ class FakeAuth:
         self.refresh_chamadas = getattr(self, "refresh_chamadas", 0) + 1
 
 
+class FakeFunctions:
+    """Edge Functions: guarda as chamadas; ``respostas[nome]`` é o retorno ou a exceção."""
+
+    def __init__(self):
+        self.chamadas: List[tuple] = []
+        self.respostas: Dict[str, Any] = {}
+
+    def invoke(self, nome: str, invoke_options: Optional[dict] = None):
+        self.chamadas.append((nome, (invoke_options or {}).get("body")))
+        resposta = self.respostas.get(nome, {})
+        if isinstance(resposta, Exception):
+            raise resposta
+        return resposta
+
+
 class FakeSupabase:
     def __init__(self, tabelas: Optional[Dict[str, List[dict]]] = None, *, max_rows: Optional[int] = None,
                  ignorar_range: bool = False, gatilho_protocolo: bool = True,
@@ -159,6 +174,7 @@ class FakeSupabase:
         self.auth = FakeAuth()
         self.rpcs: List[tuple] = []
         self.respostas_rpc: Dict[str, Any] = {}
+        self.functions = FakeFunctions()
 
     def table(self, nome: str) -> FakeQuery:
         return FakeQuery(self, nome)

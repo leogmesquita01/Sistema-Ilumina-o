@@ -62,7 +62,11 @@ nada, mesmo que exista no Auth.
 Só aparece para quem tem papel `admin`, e o banco (migração 005) barra o operador
 mesmo fora do app:
 
-- **Equipe**: ver quem tem acesso, trocar papel, desativar e liberar contas novas do Auth.
+- **Equipe**: adicionar membro (cria a conta com senha provisória e já libera), ver quem
+  tem acesso, trocar papel, desativar e liberar contas criadas pelo painel do Supabase.
+  Adicionar membro usa a Edge Function `supabase/functions/criar-membro` (a chave
+  service_role fica só nela). Publicar uma vez:
+  `supabase functions deploy criar-membro --no-verify-jwt`.
 - **Ações sensíveis**: renomear código de poste (as O.S. acompanham), excluir poste sem
   O.S., cancelar O.S. com motivo, corrigir protocolo e excluir O.S.
 - **Histórico**: quem criou, alterou ou excluiu postes, O.S. e usuários (gravado por gatilho).
