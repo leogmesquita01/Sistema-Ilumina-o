@@ -260,12 +260,23 @@ def test_qa142_localizar_ponto_distante_avisa():
 def test_qa150_erro_generico_de_banco_mostra_mensagem(monkeypatch):
     import app.dashboard.telas.mapa_postes as tela_mapa
 
-    def falha(*a, **k):
-        raise Exception("connection reset by peer")
+    import httpx
 
-    monkeypatch.setattr(tela_mapa, "obter_resumo_indicadores", falha)
+    def falha_rede(*a, **k):
+        raise httpx.ConnectError("connection reset by peer")
+
+    monkeypatch.setattr(tela_mapa, "obter_resumo_indicadores", falha_rede)
     at = _app("mapa")
-    assert any("Não foi possível falar com o banco" in e.value and "connection reset" in e.value for e in at.error)
+    assert any("Não foi possível falar com o banco" in e.value and "ConnectError" in e.value for e in at.error)
+
+    def bug(*a, **k):
+        raise KeyError("coluna_x")
+
+    monkeypatch.setattr(tela_mapa, "obter_resumo_indicadores", bug)
+    at = _app("mapa")
+    erros = [e.value for e in at.error]
+    # bug de programação não é mais apresentado como "problema de internet"
+    assert erros and "Algo deu errado" in erros[0] and "internet" not in erros[0]
 
 
 def _logado(fake):

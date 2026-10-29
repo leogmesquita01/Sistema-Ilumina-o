@@ -12,9 +12,9 @@ from app.dashboard.html_seguro import esc
 from app.dashboard.sessao import iniciais, preparar_sessao, sair, usuario_atual
 from app.dashboard.telas.login import renderizar_tela_login
 from app.dashboard.ui import PAGINAS, html
+from app.erros import mensagem_para_usuario
 from app.database.conexao import (
     ErroConfiguracao,
-    SessaoNecessaria,
     configuracao_supabase,
     inicializar_banco,
     modo_local,
@@ -50,20 +50,13 @@ if not preparar_sessao():
     st.stop()
 
 
-def _sessao_expirada(erro: Exception) -> bool:
-    texto = str(erro).lower()
-    return isinstance(erro, SessaoNecessaria) or "jwt" in texto or "pgrst301" in texto
-
-
 def _tratar_erro_banco(erro: Exception) -> None:
-    """Mostra o erro do banco na tela em vez de esconder (ou desloga se expirou)."""
-    if _sessao_expirada(erro):
-        sair("Sua sessão expirou. Entre novamente.")
+    """Mostra uma mensagem compreensível (e desloga só se a sessão expirou de fato)."""
+    mensagem = mensagem_para_usuario(erro, modo_local=modo_local())
+    if mensagem.sessao_expirada:
+        sair(mensagem.texto)
         st.rerun()
-    st.error(
-        "Não foi possível falar com o banco de dados. Verifique a internet e tente de novo.\n\n"
-        f"Detalhe técnico: {erro}"
-    )
+    st.error(mensagem.texto)
 
 
 # ---- Navegação ---------------------------------------------------------------

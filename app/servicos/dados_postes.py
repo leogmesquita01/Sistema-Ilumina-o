@@ -11,6 +11,7 @@ from app.cache import cache_ttl, limpar_cache
 from app.constantes import CENTRO_MUNICIPIO, STATUS_EM_ALERTA, STATUS_NORMAL
 from app.database.conexao import modo_local, obter_conexao, obter_supabase
 from app.database.paginacao import buscar_todas_paginas
+from app.erros import NadaGravado
 
 # Mantido por compatibilidade com as telas: é o centro do município, usado para
 # centralizar mapas. Não é mais gravado como coordenada de poste.
@@ -253,23 +254,34 @@ def codigo_duplicado(erro: Exception) -> bool:
     return "23505" in texto or "duplicate" in texto or "unique constraint" in texto
 
 
+def _conferir_gravacao(linhas_alteradas: int, codigo: str) -> None:
+    """UPDATE que não muda nada (código inexistente, RLS) não pode parecer sucesso."""
+    if not linhas_alteradas:
+        raise NadaGravado(
+            f"Nada foi gravado para o poste {codigo}: ele não foi encontrado ou seu usuário "
+            "não tem permissão para alterá-lo."
+        )
+
+
 def atualizar_status_poste(codigo: str, status: str) -> None:
     if not modo_local():
-        obter_supabase().table("postes").update({
+        res = obter_supabase().table("postes").update({
             "status": status,
             "data_atualizacao": _agora_utc_iso(),
         }).eq("codigo", codigo).execute()
         limpar_cache()
+        _conferir_gravacao(len(res.data or []), codigo)
         return
 
     conn = obter_conexao()
-    conn.execute(
+    cursor = conn.execute(
         "UPDATE postes SET status = ?, data_atualizacao = CURRENT_TIMESTAMP WHERE codigo = ?;",
         (status, codigo),
     )
     conn.commit()
     conn.close()
     limpar_cache()
+    _conferir_gravacao(cursor.rowcount, codigo)
 
 
 def definir_localizacao_poste(codigo: str, latitude: float, longitude: float) -> None:
@@ -278,19 +290,21 @@ def definir_localizacao_poste(codigo: str, latitude: float, longitude: float) ->
     lng = float(longitude)
 
     if not modo_local():
-        obter_supabase().table("postes").update({
+        res = obter_supabase().table("postes").update({
             "latitude": lat,
             "longitude": lng,
             "data_atualizacao": _agora_utc_iso(),
         }).eq("codigo", codigo).execute()
         limpar_cache()
+        _conferir_gravacao(len(res.data or []), codigo)
         return
 
     conn = obter_conexao()
-    conn.execute(
+    cursor = conn.execute(
         "UPDATE postes SET latitude = ?, longitude = ?, data_atualizacao = CURRENT_TIMESTAMP WHERE codigo = ?;",
         (lat, lng, codigo),
     )
     conn.commit()
     conn.close()
     limpar_cache()
+    _conferir_gravacao(cursor.rowcount, codigo)

@@ -7,11 +7,14 @@ Cada pessoa logada ganha o próprio cliente Supabase (guardado em
 Limitação conhecida: recarregar a página (F5) apaga o ``st.session_state`` e pede
 login de novo.
 """
+import logging
 from typing import Optional
 
 import streamlit as st
 
 from app.database.conexao import criar_cliente_supabase, definir_cliente_sessao, modo_local
+
+log = logging.getLogger("ilumina")
 
 _CHAVE = "usuario_logado"
 _USUARIO_LOCAL = {"cliente": None, "email": "", "nome": "Modo local", "papel": "admin"}
@@ -52,15 +55,18 @@ def entrar(email: str, senha: str) -> Optional[str]:
 
     usuario = resposta.user
     definir_cliente_sessao(cliente)
-    perfil = (
-        cliente.table("perfis").select("nome, papel, ativo").eq("id", usuario.id).limit(1).execute().data
-    )
+    try:
+        perfil = (
+            cliente.table("perfis").select("nome, papel, ativo").eq("id", usuario.id).limit(1).execute().data
+        )
+    except Exception as erro:
+        # Login feito, mas o perfil não pôde ser lido (rede, RLS): não deixa a
+        # sessão meio aberta nem mostra traceback na tela de login.
+        log.warning("Falha ao ler o perfil depois do login: %s", erro)
+        _encerrar(cliente)
+        return "Não foi possível carregar seu perfil agora. Verifique a internet e tente de novo."
     if not perfil or not perfil[0].get("ativo"):
-        try:
-            cliente.auth.sign_out()
-        except Exception:
-            pass
-        definir_cliente_sessao(None)
+        _encerrar(cliente)
         return "Seu usuário ainda não foi liberado no sistema. Fale com o administrador."
 
     st.session_state[_CHAVE] = {
@@ -72,13 +78,18 @@ def entrar(email: str, senha: str) -> Optional[str]:
     return None
 
 
+def _encerrar(cliente) -> None:
+    try:
+        cliente.auth.sign_out()
+    except Exception as erro:  # sem rede: o token expira sozinho
+        log.warning("sign_out falhou: %s", erro)
+    definir_cliente_sessao(None)
+
+
 def sair(mensagem: Optional[str] = None) -> None:
     usuario = st.session_state.pop(_CHAVE, None)
     if usuario and usuario.get("cliente") is not None:
-        try:
-            usuario["cliente"].auth.sign_out()
-        except Exception:
-            pass
+        _encerrar(usuario["cliente"])
     definir_cliente_sessao(None)
     if mensagem:
         st.session_state["aviso_login"] = mensagem

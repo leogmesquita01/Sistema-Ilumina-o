@@ -5,6 +5,8 @@ import streamlit as st
 
 from app.dashboard.html_seguro import esc
 from app.dashboard.ui import html, kpis, painel, painel_topo, tela, topo
+from app.database.conexao import modo_local
+from app.erros import mensagem_para_usuario
 from app.importer import import_poles_file
 
 COLUNAS_ACEITAS = [
@@ -79,8 +81,10 @@ def renderizar_tela_importar():
                         with st.spinner("Gravando os postes no banco…"):
                             try:
                                 resultado = import_poles_file(arquivo.read(), arquivo.name)
-                            except Exception as e:
+                            except ValueError as e:  # problema na planilha: mensagem já é para o usuário
                                 st.error(f"Falha ao processar o arquivo: {e}")
+                            except Exception as e:
+                                st.error(mensagem_para_usuario(e, modo_local=modo_local()).texto)
                             else:
                                 _resultado(resultado)
 

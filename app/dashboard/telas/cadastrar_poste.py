@@ -4,6 +4,8 @@ from streamlit_folium import st_folium
 
 from app.constantes import BRACOS, ESTRUTURAS, LUMINARIAS
 from app.dashboard.html_seguro import esc
+from app.database.conexao import modo_local
+from app.erros import mensagem_para_usuario
 from app.dashboard.ui import html, painel, painel_topo, tela, topo
 from app.servicos.dados_postes import COORDENADA_PADRAO, cadastrar_poste, codigo_duplicado, listar_postes, localizacao_pendente
 
@@ -165,7 +167,7 @@ def renderizar_tela_cadastrar():
                 existente = getattr(e, "codigo_existente", codigo.strip())
                 st.error(f"Já existe um poste com o código {existente}.")
             else:
-                st.error(f"Erro ao cadastrar poste: {e}")
+                st.error(mensagem_para_usuario(e, modo_local=modo_local()).texto)
             return
 
         st.session_state["cad_aviso"] = {

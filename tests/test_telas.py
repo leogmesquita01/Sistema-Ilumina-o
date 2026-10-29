@@ -105,3 +105,26 @@ def test_emitir_os_nao_deixa_reenviar_o_mesmo_formulario(dados):
     next(b for b in at.button if b.label == "Emitir outra O.S.").click()
     at.run()
     assert any(b.label == "Emitir ordem de serviço" for b in at.button)
+
+
+def test_erro_de_permissao_mostra_mensagem_sem_texto_tecnico(dados, monkeypatch):
+    import app.dashboard.telas.mapa_postes as tela_mapa
+
+    def bloqueado(*a, **k):
+        raise Exception("{'code': '42501', 'message': 'new row violates row-level security policy'}")
+
+    monkeypatch.setattr(tela_mapa, "obter_resumo_indicadores", bloqueado)
+    at = AppTest.from_file(APP, default_timeout=60)
+    at.run()
+    assert not at.exception
+    texto = at.error[0].value
+    assert "permissão" in texto and "row-level security" not in texto and "42501" in texto
+
+
+def test_localizacao_de_poste_inexistente_nao_parece_sucesso():
+    import pytest
+    from app.erros import NadaGravado
+    from app.servicos.dados_postes import definir_localizacao_poste
+
+    with pytest.raises(NadaGravado):
+        definir_localizacao_poste("NAO-EXISTE", -6.15, -35.6)

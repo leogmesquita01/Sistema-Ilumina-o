@@ -105,8 +105,7 @@ def test_qa056_obter_supabase_sem_sessao(supabase_fake, ss):
 def test_qa057_falha_ao_ler_perfil_nao_deixa_sessao_meio_aberta(supabase_fake, ss):
     """Se a consulta ao perfil falhar (rede/RLS), o token já autenticado fica no cliente e no ContextVar."""
     supabase_fake.falha = lambda q: FakeAPIError("timeout") if q.tabela == "perfis" else None
-    with pytest.raises(FakeAPIError):
-        sessao.entrar("a@b.c", "x")
+    assert "perfil" in sessao.entrar("a@b.c", "x")  # mensagem, sem exceção nem traceback
     print("sign_out:", supabase_fake.auth.sign_out_chamadas, "ContextVar:", conexao._cliente_sessao.get())
     assert supabase_fake.auth.sign_out_chamadas == 1 and conexao._cliente_sessao.get() is None
 
