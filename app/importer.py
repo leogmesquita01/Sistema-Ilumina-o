@@ -10,13 +10,14 @@ Regras de atualização (upsert por código):
 """
 import io
 import math
+import re
 import unicodedata
 from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 
 from app.cache import limpar_cache
-from app.constantes import BRACOS, ESTRUTURAS, LUMINARIAS
+from app.constantes import BRACOS, CENTRO_MUNICIPIO, ESTRUTURAS, LUMINARIAS, NOME_MUNICIPIO
 from app.database.conexao import modo_local, obter_conexao, obter_supabase
 from app.database.paginacao import buscar_todas_paginas
 
@@ -40,6 +41,16 @@ COLUMN_SYNONYMS: Dict[str, List[str]] = {
 
 # Sinônimos curtos demais para busca parcial ("x" casaria com qualquer coisa).
 _TAMANHO_MINIMO_PARCIAL = 4
+
+# Palavras comuns demais para busca parcial: "Localização do poste" ou "Foto do
+# poste" (rótulos do Kobo) não podem virar a coluna do código.
+_SO_NOME_EXATO = {"poste", "ponto"}
+
+# Coluna única de GPS do Kobo (geopoint): "lat lng altitude precisão".
+_COLUNAS_GEOPOINT = ["localizacao", "localizacao_do_poste", "geopoint", "gps", "coordenadas"]
+
+# Ponto a mais de X km do centro do município é tratado como erro de digitação/GPS.
+_RAIO_MUNICIPIO_KM = 60.0
 
 # Valores usados só para postes NOVOS quando a célula está vazia.
 _PADROES_TEXTO = {
@@ -81,7 +92,7 @@ def identify_columns(df_columns: List[Any]) -> Dict[str, Any]:
         if campo in mapping:
             return
         for sinonimo in COLUMN_SYNONYMS[campo]:
-            if parcial and len(sinonimo) < _TAMANHO_MINIMO_PARCIAL:
+            if parcial and (len(sinonimo) < _TAMANHO_MINIMO_PARCIAL or sinonimo in _SO_NOME_EXATO):
                 continue
             for norm, original in normalizadas:
                 if original in usadas:
@@ -95,6 +106,12 @@ def identify_columns(df_columns: List[Any]) -> Dict[str, Any]:
         procurar(campo, parcial=False)
     for campo in COLUMN_SYNONYMS:
         procurar(campo, parcial=True)
+
+    if "latitude" not in mapping or "longitude" not in mapping:
+        for norm, original in normalizadas:
+            if original not in usadas and norm.lstrip("_") in _COLUNAS_GEOPOINT:
+                mapping["geopoint"] = original
+                break
 
     return mapping
 
@@ -163,17 +180,45 @@ def ler_coordenadas(lat_bruta: Any, lng_bruta: Any) -> Tuple[Optional[float], Op
         return None, None, "coordenada fora da faixa válida, ignorada"
     if lat == 0 and lng == 0:
         return None, None, "coordenada 0,0 ignorada"
+    if _distancia_centro_km(lat, lng) > _RAIO_MUNICIPIO_KM:
+        if _distancia_centro_km(lng, lat) <= _RAIO_MUNICIPIO_KM:
+            return lng, lat, "latitude e longitude estavam trocadas, corrigidas"
+        return None, None, f"coordenada a mais de {_RAIO_MUNICIPIO_KM:.0f} km de {NOME_MUNICIPIO}, ignorada"
     return lat, lng, None
+
+
+def _distancia_centro_km(lat: float, lng: float) -> float:
+    """Distância aproximada (km) até o centro do município — Haversine."""
+    if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+        return math.inf
+    lat0, lng0 = CENTRO_MUNICIPIO
+    d_lat, d_lng = math.radians(lat - lat0), math.radians(lng - lng0)
+    a = math.sin(d_lat / 2) ** 2 + math.cos(math.radians(lat0)) * math.cos(math.radians(lat)) * math.sin(d_lng / 2) ** 2
+    return 2 * 6371.0 * math.asin(math.sqrt(a))
+
+
+def ler_geopoint(valor: Any) -> Tuple[Any, Any]:
+    """'-6.16 -35.60 52 4.5' (coluna geopoint do Kobo) -> ('-6.16', '-35.60')."""
+    if _vazio(valor):
+        return None, None
+    partes = str(valor).split()
+    if len(partes) < 2:
+        return valor, None  # ler_coordenadas avisa "ilegível"
+    return partes[0].strip(), partes[1].strip()
 
 
 def ler_potencia(valor: Any) -> Optional[int]:
     if _vazio(valor):
         return None
-    texto = str(valor).upper().replace("W", "").replace(",", ".").strip()
+    texto = str(valor).upper().replace("W", "").strip()
+    if re.fullmatch(r"\d{1,3}(\.\d{3})+", texto):  # "1.000" = mil watts
+        texto = texto.replace(".", "")
+    texto = texto.replace(",", ".")
     try:
-        return int(float(texto))
+        potencia = int(float(texto))
     except ValueError:
         return None
+    return potencia if potencia > 0 else None
 
 
 def _detectar_separador(texto: str) -> str:
@@ -193,9 +238,15 @@ def _ler_planilha(file_bytes: bytes, filename: str) -> pd.DataFrame:
         except UnicodeDecodeError:
             texto = file_bytes.decode("latin-1")
         return pd.read_csv(io.StringIO(texto), sep=_detectar_separador(texto), dtype=str)
-    if nome.endswith((".xlsx", ".xls")):
-        return pd.read_excel(io.BytesIO(file_bytes))
-    raise ValueError("Formato não suportado. Envie um arquivo Excel (.xlsx, .xls) ou CSV.")
+    if nome.endswith(".xlsx"):
+        # dtype=str: plaqueta "00123" não pode virar o número 123.
+        return pd.read_excel(io.BytesIO(file_bytes), dtype=str)
+    if nome.endswith(".xls"):
+        raise ValueError(
+            "Arquivo .xls (Excel antigo) não é aceito. Abra no Excel e salve como .xlsx, "
+            "ou baixe do Kobo em XLS (que já vem como .xlsx)."
+        )
+    raise ValueError("Formato não suportado. Envie um arquivo Excel (.xlsx) ou CSV.")
 
 
 def preparar_registros(df: pd.DataFrame, col_map: Dict[str, Any]) -> Dict[str, Any]:
@@ -203,6 +254,7 @@ def preparar_registros(df: pd.DataFrame, col_map: Dict[str, Any]) -> Dict[str, A
     campos_texto = [c for c in _CAMPOS_TEXTO if c in col_map]
     tem_potencia = "potencia" in col_map
     tem_coordenadas = "latitude" in col_map and "longitude" in col_map
+    coluna_geopoint = None if tem_coordenadas else col_map.get("geopoint")
 
     por_codigo: Dict[str, Dict[str, Any]] = {}
     avisos: List[str] = []
@@ -224,8 +276,12 @@ def preparar_registros(df: pd.DataFrame, col_map: Dict[str, Any]) -> Dict[str, A
             registro["potencia"] = ler_potencia(row[col_map["potencia"]])
 
         registro["latitude"] = registro["longitude"] = None
-        if tem_coordenadas:
-            lat, lng, aviso = ler_coordenadas(row[col_map["latitude"]], row[col_map["longitude"]])
+        if tem_coordenadas or coluna_geopoint is not None:
+            if coluna_geopoint is not None:
+                lat_bruta, lng_bruta = ler_geopoint(row[coluna_geopoint])
+            else:
+                lat_bruta, lng_bruta = row[col_map["latitude"]], row[col_map["longitude"]]
+            lat, lng, aviso = ler_coordenadas(lat_bruta, lng_bruta)
             registro["latitude"], registro["longitude"] = lat, lng
             if aviso and len(avisos) < 8:
                 avisos.append(f"Linha {linha} ({codigo}): {aviso}")
@@ -236,6 +292,10 @@ def preparar_registros(df: pd.DataFrame, col_map: Dict[str, Any]) -> Dict[str, A
             if len(avisos) < 8:
                 avisos.append(f"Linha {linha}: código {codigo} repetido — vale a última ocorrência")
         por_codigo[chave] = registro
+
+    if not tem_coordenadas and coluna_geopoint is None:
+        avisos.insert(0, "Nenhuma coluna de latitude/longitude ou GPS encontrada: postes novos "
+                         "ficam como localização pendente.")
 
     return {
         "registros": list(por_codigo.values()),

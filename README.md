@@ -94,7 +94,7 @@ python -m pytest
    * **Disparo no WhatsApp:** Gera uma mensagem pronta com protocolo, código do poste, rota GPS e lista de materiais para despachar com 1 clique.
 
 5. **Importador da Base da COSERN / ANEEL:**
-   * Upload de arquivos em **Excel (`.xlsx`, `.xls`)** ou **CSV**.
+   * Upload de arquivos em **Excel (`.xlsx`)** ou **CSV**.
    * Identifica colunas automaticamente mesmo com nomes variados.
    * Atualiza ou cadastra milhares de postes em lote no Supabase / banco local.
    * Reimportar é seguro: postes existentes **mantêm o status** (chamados abertos continuam

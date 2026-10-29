@@ -190,3 +190,59 @@ def test_formulario_kobo_usa_as_opcoes_do_sistema(tmp_path):
     assert set(LUMINARIAS + ESTRUTURAS + BRACOS) == rotulos
     nomes = {linha[1] for linha in wb["survey"].iter_rows(min_row=2, values_only=True)}
     assert {"codigo", "localizacao", "logradouro", "bairro", "tipo_luminaria", "potencia"} <= nomes
+
+
+# --- correções da auditoria (out/2026) -----------------------------------------
+
+def _xlsx(linhas):
+    buffer = io.BytesIO()
+    pd.DataFrame(linhas).to_excel(buffer, index=False)
+    return buffer.getvalue()
+
+
+def test_xlsx_preserva_zero_a_esquerda():
+    import_poles_file(_xlsx([{"codigo": "00123", "rua": "Rua A"}]), "a.xlsx")
+    assert obter_poste_por_codigo("00123") is not None
+
+
+def test_xls_antigo_recusado_com_mensagem_clara():
+    import pytest
+
+    with pytest.raises(ValueError, match="salve como .xlsx"):
+        import_poles_file(b"\xD0\xCF\x11\xE0" + b"\x00" * 60, "kobo.xls")
+
+
+def test_coluna_geopoint_unica_do_kobo():
+    for cabecalho in ("localizacao", "Localização do poste"):
+        res = import_poles_file(
+            _csv([{"Código da plaqueta": f"G-{cabecalho[:3]}", cabecalho: "-6.1650 -35.6010 52.0 4.5"}]), "k.csv"
+        )
+        poste = obter_poste_por_codigo(f"G-{cabecalho[:3]}")
+        assert (poste["latitude"], poste["longitude"]) == (-6.165, -35.601), res
+        assert res["colunas_identificadas"]["codigo"] == "Código da plaqueta"
+
+
+def test_rotulo_com_poste_nao_vira_codigo():
+    mapa = identify_columns(["Código da plaqueta", "Localização do poste", "Foto do poste"])
+    assert mapa["codigo"] == "Código da plaqueta"
+    assert identify_columns(["Foto do poste", "Rua"]).get("codigo") is None
+
+
+def test_avisa_quando_planilha_nao_tem_coordenada():
+    res = import_poles_file(_csv([{"codigo": "S-1", "rua": "Rua A"}]), "a.csv")
+    assert any("localização pendente" in a for a in res["detalhes_erros"])
+
+
+def test_coordenada_trocada_e_corrigida_e_distante_ignorada():
+    assert ler_coordenadas("-35.60", "-6.16")[:2] == (-6.16, -35.60)
+    lat, lng, aviso = ler_coordenadas("-23.55", "-46.63")  # São Paulo
+    assert (lat, lng) == (None, None) and "km" in aviso
+
+
+def test_potencia_milhar_e_invalida():
+    from app.importer import ler_potencia
+
+    assert ler_potencia("1.000") == 1000
+    assert ler_potencia("100 W") == 100
+    assert ler_potencia("70,5") == 70
+    assert ler_potencia("-50") is None and ler_potencia("0") is None

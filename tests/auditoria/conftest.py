@@ -39,8 +39,6 @@ def supabase_fake(monkeypatch):
 # xfail estrito: quando a correção entra, o teste passa a "XPASS" e a suíte
 # falha — sinal para tirar o nome daqui. Ver auditoria/relatorio-auditoria-2026-10-28.md.
 PENDENTES = {
-    "test_qa019_ler_potencia_milhar_pt_br": "AUD-12 potência '1.000'",
-    "test_qa020_xls_anunciado_mas_sem_xlrd": "AUD-12 .xls sem xlrd",
     "test_qa031_localizacao_pendente_nan_e_fora_da_faixa": "AUD-22 NaN/fora da faixa",
     "test_qa037_paginacao_max_rows_menor_que_pagina": "AUD-23 paginação",
     "test_qa042_cache_args_nao_hashable": "AUD-26 chave do cache",

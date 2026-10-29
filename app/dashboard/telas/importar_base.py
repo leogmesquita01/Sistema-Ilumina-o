@@ -9,7 +9,7 @@ from app.importer import import_poles_file
 
 COLUNAS_ACEITAS = [
     ("Código *", "CODIGO, PLAQUETA, POSTE, BARRAMENTO"),
-    ("Coordenadas", "LATITUDE, LONGITUDE (inclui o GPS do Kobo)"),
+    ("Coordenadas", "LATITUDE, LONGITUDE ou a coluna de GPS do Kobo"),
     ("Endereço", "LOGRADOURO, RUA, BAIRRO, REFERÊNCIA"),
     ("Luminária", "TIPO_LUMINARIA, POTÊNCIA"),
     ("Estrutura", "TIPO_POSTE, TIPO_BRACO"),
@@ -69,8 +69,8 @@ def renderizar_tela_importar():
         col_envio, col_ajuda = st.columns([1.6, 1.2], gap="medium")
         with col_envio:
             with painel("importar-envio"):
-                painel_topo("Arquivo", ".xlsx · .xls · .csv")
-                arquivo = st.file_uploader("Selecione a planilha de postes", type=["xlsx", "xls", "csv"])
+                painel_topo("Arquivo", ".xlsx · .csv")
+                arquivo = st.file_uploader("Selecione a planilha de postes", type=["xlsx", "csv"])
                 if arquivo is not None:
                     html(
                         f'<div class="il-nota"><span class="mono">{esc(arquivo.name)}</span> · {arquivo.size / 1024:.1f} KB</div>'
