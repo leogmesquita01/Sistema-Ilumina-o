@@ -47,6 +47,7 @@ class SessaoNecessaria(PermissionError):
 
 
 _cliente_sessao: contextvars.ContextVar = contextvars.ContextVar("cliente_supabase_sessao", default=None)
+_identidade_sessao: contextvars.ContextVar = contextvars.ContextVar("identidade_sessao", default=None)
 
 
 def _valor_config(nome: str, padrao: Optional[str] = None) -> Optional[str]:
@@ -87,12 +88,23 @@ def criar_cliente_supabase():
     from supabase import ClientOptions, create_client
 
     url, chave = configuracao_supabase()
-    return create_client(url, chave, options=ClientOptions(persist_session=False, auto_refresh_token=True))
+    # auto_refresh_token=False: com True, cada login criava uma thread que renovava
+    # o token para sempre — mesmo depois de a aba ser fechada ou recarregada (F5).
+    # A renovação agora é feita sob demanda em sessao.preparar_sessao().
+    return create_client(url, chave, options=ClientOptions(persist_session=False, auto_refresh_token=False))
 
 
-def definir_cliente_sessao(cliente) -> None:
-    """Registra o cliente do usuário logado para esta execução do script."""
+def definir_cliente_sessao(cliente, identidade: Optional[str] = None) -> None:
+    """Registra o cliente do usuário logado (e quem é ele) para esta execução do script."""
     _cliente_sessao.set(cliente)
+    _identidade_sessao.set(identidade if cliente is not None else None)
+
+
+def identidade_sessao() -> Optional[str]:
+    """Quem está consultando — separa o cache por usuário. ``None`` = sem sessão identificada."""
+    if modo_local():
+        return "modo-local"
+    return _identidade_sessao.get()
 
 
 def obter_supabase():

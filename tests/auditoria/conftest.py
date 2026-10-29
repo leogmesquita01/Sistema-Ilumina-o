@@ -41,8 +41,6 @@ def supabase_fake(monkeypatch):
 PENDENTES = {
     "test_qa031_localizacao_pendente_nan_e_fora_da_faixa": "AUD-22 NaN/fora da faixa",
     "test_qa037_paginacao_max_rows_menor_que_pagina": "AUD-23 paginação",
-    "test_qa042_cache_args_nao_hashable": "AUD-26 chave do cache",
-    "test_qa058_cache_global_entre_sessoes": "AUD-07 cache entre sessões",
     "test_qa066_import_supabase_falha_no_meio_nao_e_atomica": "AUD-05 importação parcial",
     "test_qa072_criar_os_sem_protocolo_nao_deixa_os_orfa": "AUD-05 O.S. órfã",
     "test_qa079_criar_os_falha_ao_recalcular_status": "AUD-05 status do poste",

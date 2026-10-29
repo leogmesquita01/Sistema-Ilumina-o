@@ -116,6 +116,13 @@ class FakeAuth:
     def sign_out(self):
         self.sign_out_chamadas += 1
 
+    def get_session(self):
+        import time
+        return SimpleNamespace(expires_at=time.time() + 3600, access_token="tok")
+
+    def refresh_session(self):
+        self.refresh_chamadas = getattr(self, "refresh_chamadas", 0) + 1
+
 
 class FakeSupabase:
     def __init__(self, tabelas: Optional[Dict[str, List[dict]]] = None, *, max_rows: Optional[int] = None,

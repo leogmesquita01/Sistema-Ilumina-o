@@ -112,13 +112,18 @@ def test_qa057_falha_ao_ler_perfil_nao_deixa_sessao_meio_aberta(supabase_fake, s
 
 @pytest.mark.defeito("DEF-16")
 def test_qa058_cache_global_entre_sessoes(supabase_fake, ss):
-    """Usuário B (perfil desativado/RLS diferente) recebe do cache o resultado lido com o token de A."""
+    """Usuário B (perfil desativado/RLS diferente) não pode receber do cache o que foi lido com o token de A."""
     from app.servicos.dados_postes import listar_postes
 
     supabase_fake.tabelas["postes"] = [_poste("P-01")]
+    conexao.definir_cliente_sessao(supabase_fake, identidade="usuario-a")
     assert len(listar_postes()) == 1
-    outro = FakeSupabase()  # sessão B: o banco devolveria 0 linhas para ela
-    conexao.definir_cliente_sessao(outro)
+    chamadas_a = len(supabase_fake.chamadas)
+    assert len(listar_postes()) == 1 and len(supabase_fake.chamadas) == chamadas_a  # A usa o próprio cache
+
+    outro = FakeSupabase()  # sessão B: o banco devolve 0 linhas para ela
+    conexao.definir_cliente_sessao(outro, identidade="usuario-b")
+    assert listar_postes() == []
     print("CHAMADAS DA SESSÃO B:", len(outro.chamadas))
     assert outro.chamadas != [], "sessão B recebeu dados do cache da sessão A, sem consultar o banco"
     conexao.definir_cliente_sessao(None)

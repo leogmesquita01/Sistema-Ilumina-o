@@ -8,11 +8,12 @@ Limitação conhecida: recarregar a página (F5) apaga o ``st.session_state`` e 
 login de novo.
 """
 import logging
+import time
 from typing import Optional
 
 import streamlit as st
 
-from app.database.conexao import criar_cliente_supabase, definir_cliente_sessao, modo_local
+from app.database.conexao import SessaoNecessaria, criar_cliente_supabase, definir_cliente_sessao, modo_local
 
 log = logging.getLogger("ilumina")
 
@@ -32,8 +33,28 @@ def preparar_sessao() -> bool:
     if usuario is None:
         definir_cliente_sessao(None)
         return False
-    definir_cliente_sessao(usuario["cliente"])
+    cliente = usuario["cliente"]
+    if cliente is not None:
+        try:
+            _renovar_token_se_preciso(cliente)
+        except Exception as erro:
+            log.info("Sessão encerrada ao renovar o token: %s", erro)
+            sair("Sua sessão expirou. Entre novamente.")
+            return False
+    definir_cliente_sessao(cliente, identidade=usuario.get("id") or usuario.get("email"))
     return True
+
+
+_MARGEM_RENOVACAO_S = 120
+
+
+def _renovar_token_se_preciso(cliente) -> None:
+    """Renova o token quando faltam menos de 2 min (sem thread em segundo plano)."""
+    sessao = cliente.auth.get_session()  # já renova se faltarem ≤ 10 s
+    if sessao is None:
+        raise SessaoNecessaria("Sessão não encontrada no cliente.")
+    if sessao.expires_at and sessao.expires_at - time.time() < _MARGEM_RENOVACAO_S:
+        cliente.auth.refresh_session()
 
 
 def entrar(email: str, senha: str) -> Optional[str]:
@@ -71,6 +92,7 @@ def entrar(email: str, senha: str) -> Optional[str]:
 
     st.session_state[_CHAVE] = {
         "cliente": cliente,
+        "id": str(usuario.id),
         "email": usuario.email or email,
         "nome": (perfil[0].get("nome") or "").strip() or email.split("@")[0],
         "papel": perfil[0].get("papel") or "operador",
