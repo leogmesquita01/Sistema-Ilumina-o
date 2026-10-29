@@ -24,6 +24,7 @@ def eh_urgente(status) -> bool:
 # --- Status e prioridade da O.S. --------------------------------------------
 OS_ABERTA = "aberta"
 OS_CONCLUIDA = "concluida"
+OS_CANCELADA = "cancelada"  # só o administrador cancela (migração 005)
 
 PRIORIDADE_NORMAL = "Normal"
 PRIORIDADE_ALTA = "Alta"

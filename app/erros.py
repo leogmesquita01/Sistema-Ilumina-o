@@ -62,6 +62,8 @@ def mensagem_para_usuario(erro: Exception, modo_local: bool = False) -> Mensagem
     log.error("Erro tratado na tela (%s)", detalhe, exc_info=erro)
     if isinstance(erro, NadaGravado):
         return Mensagem(f"{erro}\n\n{detalhe}")
+    if codigo == "P0001":  # raise exception dos gatilhos/funções: a mensagem já é para o usuário
+        return Mensagem(f"{getattr(erro, 'message', None) or erro}\n\n{detalhe}")
     if codigo in _POR_CODIGO:
         return Mensagem(f"{_POR_CODIGO[codigo]}\n\n{detalhe}")
     if _falha_de_rede(erro):

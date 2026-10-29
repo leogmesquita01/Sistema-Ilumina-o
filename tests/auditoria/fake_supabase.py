@@ -96,8 +96,24 @@ class FakeQuery:
         self.acao, self.payload, self.on_conflict = "upsert", copy.deepcopy(dados), on_conflict
         return self._op("upsert", dados, on_conflict=on_conflict)
 
+    def delete(self, **kw):
+        self.acao = "delete"
+        return self._op("delete")
+
     def execute(self):
         return self.cliente._executar(self)
+
+
+class FakeRPC:
+    def __init__(self, cliente: "FakeSupabase", nome: str, params: Optional[dict]):
+        self.cliente, self.nome, self.params = cliente, nome, params or {}
+
+    def execute(self):
+        self.cliente.rpcs.append((self.nome, self.params))
+        resposta = self.cliente.respostas_rpc.get(self.nome)
+        if isinstance(resposta, Exception):
+            raise resposta
+        return SimpleNamespace(data=resposta(self.params) if callable(resposta) else resposta, count=None)
 
 
 class FakeAuth:
@@ -141,9 +157,14 @@ class FakeSupabase:
         self.update_vazio = update_vazio  # imita RLS que filtra todas as linhas no UPDATE
         self.chamadas: List[FakeQuery] = []
         self.auth = FakeAuth()
+        self.rpcs: List[tuple] = []
+        self.respostas_rpc: Dict[str, Any] = {}
 
     def table(self, nome: str) -> FakeQuery:
         return FakeQuery(self, nome)
+
+    def rpc(self, nome: str, params: Optional[dict] = None) -> "FakeRPC":
+        return FakeRPC(self, nome, params)
 
     # utilidades de teste --------------------------------------------------------
     def chamadas_de(self, tabela: str, acao: Optional[str] = None) -> List[FakeQuery]:
@@ -214,6 +235,13 @@ class FakeSupabase:
                 return SimpleNamespace(data=[], count=None)
             for r in alvo:
                 r.update(q.payload)
+            return SimpleNamespace(data=[dict(r) for r in alvo], count=None)
+
+        if q.acao == "delete":
+            alvo = [r for r in tabela if self._casa(r, q)]
+            if self.update_vazio:  # RLS que esconde a linha também barra o DELETE
+                return SimpleNamespace(data=[], count=None)
+            self.tabelas[q.tabela] = [r for r in tabela if r not in alvo]
             return SimpleNamespace(data=[dict(r) for r in alvo], count=None)
 
         if q.acao == "upsert":
