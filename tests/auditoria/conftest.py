@@ -39,17 +39,15 @@ def supabase_fake(monkeypatch):
 # xfail estrito: quando a correção entra, o teste passa a "XPASS" e a suíte
 # falha — sinal para tirar o nome daqui. Ver auditoria/relatorio-auditoria-2026-10-28.md.
 PENDENTES = {
-    "test_qa031_localizacao_pendente_nan_e_fora_da_faixa": "AUD-22 NaN/fora da faixa",
     "test_qa037_paginacao_max_rows_menor_que_pagina": "AUD-23 paginação",
     "test_qa066_import_supabase_falha_no_meio_nao_e_atomica": "AUD-05 importação parcial",
     "test_qa072_criar_os_sem_protocolo_nao_deixa_os_orfa": "AUD-05 O.S. órfã",
     "test_qa079_criar_os_falha_ao_recalcular_status": "AUD-05 status do poste",
-    "test_qa081_listar_postes_or_caracteres_especiais": "AUD-20 curingas na busca",
 }
 
 
 def pytest_collection_modifyitems(items):
     for item in items:
         motivo = PENDENTES.get(getattr(item, "originalname", item.name))
-        if motivo and not item.name.endswith("[a.b]"):  # o ponto já é tratado corretamente
+        if motivo:
             item.add_marker(pytest.mark.xfail(reason=f"pendente: {motivo}", strict=True))

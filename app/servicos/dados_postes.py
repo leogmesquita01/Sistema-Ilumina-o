@@ -33,9 +33,13 @@ def localizacao_pendente(poste: Dict[str, Any]) -> bool:
     if lat is None or lng is None:
         return True
     try:
-        arredondado = (round(float(lat), 4), round(float(lng), 4))
+        lat, lng = float(lat), float(lng)
     except (TypeError, ValueError):
         return True
+    # NaN e valores fora da faixa (dado corrompido) não são coordenada confiável.
+    if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+        return True
+    arredondado = (round(lat, 4), round(lng, 4))
     return arredondado == (round(CENTRO_MUNICIPIO[0], 4), round(CENTRO_MUNICIPIO[1], 4))
 
 
@@ -93,6 +97,22 @@ def listar_postes(filtro_status: Optional[str] = None, termo_busca: Optional[str
     return _listar_postes_cache(filtro_status or "Todos", (termo_busca or "").strip())
 
 
+def _escapar_like(texto: str) -> str:
+    """'%' e '_' do usuário são texto, não curinga do LIKE (ex.: código "P_01")."""
+    return texto.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+def _termo_literal_postgrest(texto: str) -> str:
+    """Termo de busca seguro dentro de ``or_()`` do PostgREST.
+
+    Vírgula, parênteses e aspas quebrariam a sintaxe do filtro (erro 400); o
+    ``*`` vira curinga no PostgREST. Esses viram espaço; ``%``/``_`` são escapados.
+    """
+    for caractere in ',()"*':
+        texto = texto.replace(caractere, " ")
+    return _escapar_like(texto)
+
+
 @cache_ttl()
 def _listar_postes_cache(filtro_status: str, termo_busca: str) -> List[Dict[str, Any]]:
     if not modo_local():
@@ -103,8 +123,7 @@ def _listar_postes_cache(filtro_status: str, termo_busca: str) -> List[Dict[str,
             if filtro_status and filtro_status != "Todos":
                 consulta = consulta.eq("status", filtro_status)
             if termo_busca:
-                # vírgula e parênteses quebrariam a sintaxe de filtro do PostgREST
-                t = termo_busca.replace(",", " ").replace("(", " ").replace(")", " ")
+                t = _termo_literal_postgrest(termo_busca)
                 consulta = consulta.or_(
                     f"codigo.ilike.%{t}%,logradouro.ilike.%{t}%,bairro.ilike.%{t}%"
                 )
@@ -123,8 +142,9 @@ def _listar_postes_cache(filtro_status: str, termo_busca: str) -> List[Dict[str,
         params.append(filtro_status)
 
     if termo_busca:
-        termo = f"%{termo_busca}%"
-        query += " AND (codigo LIKE ? OR logradouro LIKE ? OR bairro LIKE ?)"
+        termo = f"%{_escapar_like(termo_busca)}%"
+        query += (" AND (codigo LIKE ? ESCAPE '\\' OR logradouro LIKE ? ESCAPE '\\'"
+                  " OR bairro LIKE ? ESCAPE '\\')")
         params.extend([termo, termo, termo])
 
     query += " ORDER BY id DESC"

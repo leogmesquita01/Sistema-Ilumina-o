@@ -246,3 +246,12 @@ def test_potencia_milhar_e_invalida():
     assert ler_potencia("100 W") == 100
     assert ler_potencia("70,5") == 70
     assert ler_potencia("-50") is None and ler_potencia("0") is None
+
+
+def test_busca_trata_curinga_como_texto():
+    from app.servicos.dados_postes import cadastrar_poste, listar_postes
+
+    cadastrar_poste({"codigo": "P_01", "logradouro": "Rua A"})
+    cadastrar_poste({"codigo": "PX01", "logradouro": "Rua B"})
+    assert [p["codigo"] for p in listar_postes(termo_busca="P_01")] == ["P_01"]
+    assert listar_postes(termo_busca="100%") == []
